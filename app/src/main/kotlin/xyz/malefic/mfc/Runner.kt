@@ -24,7 +24,5 @@ fun main(args: Array<String>) =
         .main(args)
 
 class Runner : CliktCommand() {
-    override val printHelpOnEmptyArgs = true
-
     override fun run() = Unit
 }

@@ -51,13 +51,27 @@ class AddCommand : CliktCommand(help = "Add an RSS feed URL", name = "add") {
 }
 
 class DeleteCommand : CliktCommand(help = "Delete an RSS feed URL", name = "delete") {
-    private val url: String by argument(help = "URL of the RSS feed")
-
     override fun run() {
-        if (rssURLs.remove(url)) {
-            echo("Deleted RSS feed URL: $url")
-        } else {
-            echo("RSS feed URL not found: $url")
+        if (rssURLs.isEmpty()) {
+            echo("No RSS URLs found.")
+            return
         }
+
+        echo("Select an RSS feed URL to delete:")
+        rssURLs.forEachIndexed { index, url ->
+            echo("$index: $url")
+        }
+
+        echo("Enter the index of the URL to delete:")
+        val input = readLine()?.toIntOrNull()
+
+        if (input == null || input !in rssURLs.indices) {
+            echo("Invalid index.")
+            return
+        }
+
+        val removedUrl = rssURLs.elementAt(input)
+        rssURLs.remove(removedUrl)
+        echo("Deleted RSS feed URL: $removedUrl")
     }
 }
