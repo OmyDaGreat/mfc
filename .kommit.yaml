@@ -8,6 +8,7 @@ types:
 scopes:
   all:
     - core
+    - rss
     - ui
     - docs
     - project

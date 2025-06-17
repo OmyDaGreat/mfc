@@ -10,6 +10,7 @@ repositories {
 
 dependencies {
     implementation(libs.bundles.ajalt)
+    implementation(libs.prefs)
 }
 
 testing {
