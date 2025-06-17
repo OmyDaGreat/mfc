@@ -101,10 +101,10 @@ jobs:
 
       - name: Compile Kotlin Application
         run: ./gradlew shadowJar
-                env:
-                  JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.6-7/x64
-                  JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.6-7/x64
-                  KOTLIN_HOME: /opt/hostedtoolcache/kotlin/2.1.10/x64/kotlinc
+        env:
+          JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.6-7/x64
+          JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.6-7/x64
+          KOTLIN_HOME: /opt/hostedtoolcache/kotlin/2.1.10/x64/kotlinc
 
       - name: Prepare Files for Packaging
         run: |
