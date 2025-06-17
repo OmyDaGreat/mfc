@@ -9,8 +9,7 @@ scopes:
   all:
     - core
     - rss
-    - ui
-    - docs
+    - gradle
     - project
   chore:
     - build
