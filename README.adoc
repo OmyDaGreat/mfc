@@ -46,7 +46,7 @@ runner.bat hello
 == Customizing the Template
 
 1. Rename the main Kotlin file from `Runner.kt` to your application name.
-2. Update the batch file name from `runner.bat` to match your application.
+2. Update the batch file name from `mfc.bat` to match your application.
 3. Edit `.kommit.yaml` to customize commit message types and scopes as needed.
 
 == Configuring Automated Releases
@@ -82,7 +82,7 @@ env:
 
 4. Add the workflow file to your Scoop bucket repository:
 - Create a file at `.github/workflows/update-runner.yml` in your bucket repository
-- Copy the content from `update-runner.yml.tmp` in this template
+- Copy the content from `update-runner.yml` in this template
 - Update the environment variables to match your application settings
 +
 [source,yaml]

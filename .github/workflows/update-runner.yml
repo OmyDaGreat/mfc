@@ -9,9 +9,9 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      APP_NAME: runner
-      REPO_LOCATION: https://github.com/OmyDaGreat/KotlinScriptTemplate
-      DESCRIPTION: A Kotlin-based conventional commit message generator
+      APP_NAME: mfc
+      REPO_LOCATION: https://github.com/OmyDaGreat/mfc
+      DESCRIPTION: A multi-use general purpose terminal application!
 
     steps:
       - name: Checkout code

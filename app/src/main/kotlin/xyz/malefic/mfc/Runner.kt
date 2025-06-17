@@ -1,7 +1,7 @@
 import kotlin.system.exitProcess
 
 /**
- * The main function to run the CommitGenerator.
+ * The xyz.malefic.mfc.main function to run the CommitGenerator.
  * @param args The command-line arguments.
  */
 fun main(args: Array<String>) {
