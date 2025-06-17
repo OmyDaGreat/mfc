@@ -11,24 +11,27 @@ repositories {
 dependencies {
     implementation(libs.bundles.ajalt)
     implementation(libs.prefs)
+    implementation(libs.coroutines)
 }
 
 testing {
     suites {
         val test by getting(JvmTestSuite::class) {
-            useKotlinTest("2.1.0")
+            useKotlinTest("2.1.20")
         }
     }
 }
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
+        languageVersion = JavaLanguageVersion.of(17)
     }
 }
 
 tasks {
     shadowJar {
+        mergeServiceFiles()
+        minimize()
         archiveBaseName.set("mfc")
         archiveClassifier.set("")
         archiveVersion.set("")
