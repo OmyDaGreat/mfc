@@ -25,15 +25,6 @@ jobs:
     permissions:
       contents: write
 
-    env:
-      KT_NAME: Runner
-      APP_NAME: mfc
-      REPO_LOCATION: https://github.com/OmyDaGreat/mfc
-      BUCKET_LOCATION: OmyDaGreat/MaleficBucket
-      BUCKET_NAME: malefic
-      DESCRIPTION: A multi-use general purpose terminal application!
-      KOTLIN_VERSION: '2.1.20'
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -44,12 +35,12 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: 21
+          java-version: '21'
 
       - name: Setup Kotlin
         uses: fwilhe2/setup-kotlin@v1
         with:
-          version: ${{ env.KOTLIN_VERSION }}
+          version: '2.1.20'
 
       - name: Get current date
         id: date
@@ -96,6 +87,34 @@ jobs:
           latest_commit_message=$(git log -1 --pretty=format:%s)
           echo "latest_commit_message=$latest_commit_message" >> $GITHUB_OUTPUT
 
+      - name: Generate Changelog
+        id: changelog
+        run: |
+          # Get the latest tag or use the initial commit if no tags exist
+          latest_tag=$(git tag -l "v*" | sort -V | tail -n 1)
+
+          if [ -z "$latest_tag" ]; then
+            # If no tags exist, get all commits
+            echo "No previous tags found, including all commits in changelog"
+            changelog=$(git log --pretty=format:"* %s" --reverse)
+          else
+            # Get commits since the last tag
+            echo "Getting commits since $latest_tag"
+            changelog=$(git log ${latest_tag}..HEAD --pretty=format:"* %s" --reverse)
+
+            # If no commits since last tag, add a message
+            if [ -z "$changelog" ]; then
+              changelog="No changes since last release"
+            fi
+          fi
+
+          # Escape newlines for GitHub Actions output
+          changelog="${changelog//'%'/'%25'}"
+          changelog="${changelog//$'\n'/'%0A'}"
+          changelog="${changelog//$'\r'/'%0D'}"
+
+          echo "changelog=$changelog" >> $GITHUB_OUTPUT
+
       - name: Make Gradlew executable
         run: chmod +x gradlew
 
@@ -105,52 +124,52 @@ jobs:
       - name: Prepare Files for Packaging
         run: |
           mkdir -p package
-          cp app/build/libs/${{ env.APP_NAME }}.jar package/
+          cp app/build/libs/mfc.jar package/
           cp LICENSE package/ || echo "LICENSE file not found"
           cp README.adoc package/ || echo "README.adoc file not found"
 
           # Create batch file
-          echo '@echo off' > package/${{ env.APP_NAME }}.bat
-          echo 'java -jar "%~dp0\${{ env.APP_NAME }}.jar" %*' >> package/${{ env.APP_NAME }}.bat
+          echo '@echo off' > package/mfc.bat
+          echo 'java -jar "%~dp0\mfc.jar" %*' >> package/mfc.bat
 
-      - name: Verify ${{ env.APP_NAME }}.bat File Exists
+      - name: Verify mfc.bat File Exists
         run: |
-          if [ ! -f package/${{ env.APP_NAME }}.bat ]; then
-            echo "${{ env.APP_NAME }}.bat file not found!"
+          if [ ! -f package/mfc.bat ]; then
+            echo "mfc.bat file not found!"
             exit 1
           fi
 
       - name: Create ZIP Archive
         run: |
           cd package
-          zip -r ../${{ env.APP_NAME }}-${{ steps.version.outputs.version }}.zip ./*
+          zip -r ../mfc-${{ steps.version.outputs.version }}.zip ./*
 
       - name: Calculate SHA256
         id: sha
         run: |
-          checksum=$(sha256sum ${{ env.APP_NAME }}-${{ steps.version.outputs.version }}.zip | awk '{print $1}')
+          checksum=$(sha256sum mfc-${{ steps.version.outputs.version }}.zip | awk '{print $1}')
           echo "sha256=$checksum" >> $GITHUB_OUTPUT
 
       - name: Create Scoop Manifest
         run: |
-          cat > ${{ env.APP_NAME }}.json << EOF
+          cat > mfc.json << EOF
           {
               "version": "${{ steps.version.outputs.version }}",
-              "description": "${{ env.DESCRIPTION }}",
-              "homepage": "${{ env.REPO_LOCATION }}",
+              "description": "A Kotlin-based conventional commit message generator",
+              "homepage": "https://github.com/OmyDaGreat/mfc",
               "license": "MIT",
               "architecture": {
                   "64bit": {
-                      "url": "${{ env.REPO_LOCATION }}/releases/download/${{ steps.version.outputs.tag }}/${{ env.APP_NAME }}-${{ steps.version.outputs.version }}.zip",
+                      "url": "https://github.com/OmyDaGreat/mfc/releases/download/${{ steps.version.outputs.tag }}/mfc-${{ steps.version.outputs.version }}.zip",
                       "hash": "${{ steps.sha.outputs.sha256 }}"
                   }
               },
-              "bin": "${{ env.APP_NAME }}.bat",
+              "bin": "mfc.bat",
               "checkver": "github",
               "autoupdate": {
                   "architecture": {
                       "64bit": {
-                          "url": "${{ env.REPO_LOCATION }}/releases/download/v\$version/${{ env.APP_NAME }}-\$version.zip"
+                          "url": "https://github.com/OmyDaGreat/mfc/releases/download/v\$version/mfc-\$version.zip"
                       }
                   }
               }
@@ -166,29 +185,47 @@ jobs:
           tag_name: ${{ steps.version.outputs.tag }}
           name: Release ${{ steps.version.outputs.version }}
           body: |
-            Release ${{ steps.version.outputs.version }} - ${{ steps.date.outputs.date }}
+            # 🚀 Release ${{ steps.version.outputs.version }} - ${{ steps.date.outputs.date }}
 
-            ### SHA256 Checksum
+            **mfc** is a multi-use general purpose terminal application!
+
+            ## 📋 What's Changed
+            ${{ steps.changelog.outputs.changelog }}
+
+            ## 📦 Installation
+
+            ### 🪣 Via Scoop (Windows)
+            ```powershell
+            scoop bucket add malefic https://github.com/OmyDaGreat/MaleficBucket
+            scoop install mfc
+            ```
+
+            ### 📥 Direct Download
+            Download the [mfc-${{ steps.version.outputs.version }}.zip](https://github.com/OmyDaGreat/mfc/releases/download/${{ steps.version.outputs.tag }}/mfc-${{ steps.version.outputs.version }}.zip) file from this release.
+
+            ## 🔐 Verification
+
+            ### 🔑 SHA256 Checksum
             ```
             ${{ steps.sha.outputs.sha256 }}
             ```
 
-            ### Installation via Scoop
-            ```
-            scoop bucket add ${{ env.BUCKET_NAME }} https://github.com/${{ env.BUCKET_LOCATION }}
-            scoop install ${{ env.APP_NAME }}
-            ```
+            ## 📚 Documentation
+            For more information, check out the [README](https://github.com/OmyDaGreat/mfc/blob/main/README.adoc) file.
+
+            ## 🙏 Feedback
+            If you encounter any issues or have suggestions, please [open an issue](https://github.com/OmyDaGreat/mfc/issues/new) on GitHub.
           draft: false
           prerelease: false
           files: |
-            ${{ env.APP_NAME }}-${{ steps.version.outputs.version }}.zip
-            ${{ env.APP_NAME }}.json
+            mfc-${{ steps.version.outputs.version }}.zip
+            mfc.json
 
       - name: Update Scoop Bucket
         if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.update_bucket != 'false' }}
         uses: peter-evans/repository-dispatch@v3
         with:
           token: ${{ secrets.REPO_ACCESS_TOKEN }}
-          repository: ${{ env.BUCKET_LOCATION }}
-          event-type: update-${{ env.APP_NAME }}
+          repository: OmyDaGreat/MaleficBucket
+          event-type: update-mfc
           client-payload: '{"version": "${{ steps.version.outputs.version }}", "sha256": "${{ steps.sha.outputs.sha256 }}", "tag": "${{ steps.version.outputs.tag }}", "latest_commit_message": "${{ steps.commit_message.outputs.latest_commit_message }}"}'
