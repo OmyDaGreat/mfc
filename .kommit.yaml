@@ -12,6 +12,11 @@ scopes:
     - ui
     - docs
     - project
+  chore:
+    - build
+    - ci
+    - deps
+    - tools
 
 options:
   allowBreakingChanges:
