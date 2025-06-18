@@ -1,6 +1,7 @@
 package xyz.malefic.mfc.util
 
 import com.github.ajalt.mordant.terminal.Terminal
+import com.github.ajalt.mordant.terminal.danger
 
 /**
  * Clears the console screen in a cross-platform manner.
@@ -30,6 +31,6 @@ fun Terminal.clearConsole() {
             }
         }
     } catch (e: Exception) {
-        error("Failed to clear console: ${e.message}")
+        danger("Failed to clear console: ${e.message}")
     }
 }
