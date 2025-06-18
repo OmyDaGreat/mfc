@@ -1,7 +1,11 @@
 package xyz.malefic.mfc
 
+import com.github.ajalt.clikt.core.context
 import com.github.ajalt.clikt.core.main
 import com.github.ajalt.clikt.core.subcommands
+import com.github.ajalt.clikt.core.terminal
+import com.github.ajalt.mordant.rendering.AnsiLevel
+import com.github.ajalt.mordant.terminal.Terminal
 import xyz.malefic.mfc.command.gradle.GrunCommand
 import xyz.malefic.mfc.command.rss.AddCommand
 import xyz.malefic.mfc.command.rss.DeleteCommand
@@ -15,7 +19,9 @@ import xyz.malefic.mfc.util.CliktCommand
  */
 fun main(args: Array<String>) =
     Runner()
-        .subcommands(GrunCommand(), RssCommand().subcommands(FetchCommand(), AddCommand(), DeleteCommand()))
+        .context {
+            terminal = Terminal(ansiLevel = AnsiLevel.TRUECOLOR, interactive = true)
+        }.subcommands(GrunCommand(), RssCommand().subcommands(FetchCommand(), AddCommand(), DeleteCommand()))
         .main(args)
 
 class Runner : CliktCommand() {

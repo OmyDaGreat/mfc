@@ -1,5 +1,5 @@
 [versions]
-shadow = "8.1.1"
+shadow = "8.3.6"
 kotlin = "2.1.21"
 clikt = "5.0.3"
 mordant = "3.0.2"
@@ -15,7 +15,7 @@ kotlinx-coroutines = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutin
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
-shadow = { id = "com.github.johnrengelman.shadow", version.ref = "shadow" }
+shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }
 
 [bundles]
 ajalt = ["clikt", "mordant", "mordant-coroutines"]

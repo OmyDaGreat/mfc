@@ -49,7 +49,7 @@ class FetchCommand : CliktCommand("fetch", "Fetch all RSS feeds") {
         paginateItems(allItems)
     }
 
-    private suspend fun fetchAllItems(): List<Pair<String, Date>> =
+    private suspend fun fetchAllItems() =
         coroutineScope {
             val allItems = mutableListOf<Pair<String, Date>>()
             val fetchJobs =
@@ -95,9 +95,7 @@ class FetchCommand : CliktCommand("fetch", "Fetch all RSS feeds") {
             displayPage(allItems, currentPage)
             when {
                 event.isCtrlC -> InputReceiver.Status.Finished
-                event.key == "q" -> {
-                    InputReceiver.Status.Finished
-                }
+                event.key == "q" -> InputReceiver.Status.Finished
                 else -> {
                     when (event.key) {
                         "RightArrow", "d" -> {
@@ -130,7 +128,7 @@ class FetchCommand : CliktCommand("fetch", "Fetch all RSS feeds") {
             terminal.muted("End of items.")
         }
 
-        terminal.info("Use 'w' or 'd' for next page, 's' or 'a' for previous page, or 'q' to quit.")
+        terminal.info("Use the right arrow key or 'd' for next page, left arrow key or 'a' for previous page, or 'q' to quit.")
     }
 }
 

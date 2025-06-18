@@ -30,8 +30,9 @@ java {
 
 tasks {
     shadowJar {
-        mergeServiceFiles()
-        minimize()
+        mergeServiceFiles {
+            include("META-INF/services/*")
+        }
         archiveBaseName.set("mfc")
         archiveClassifier.set("")
         archiveVersion.set("")
