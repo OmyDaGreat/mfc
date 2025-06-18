@@ -1,7 +1,8 @@
 package xyz.malefic.mfc.command.rss
 
 import com.github.ajalt.clikt.parameters.arguments.argument
-import com.github.ajalt.mordant.input.InputReceiver
+import com.github.ajalt.mordant.input.InputReceiver.Status.Companion.Finished
+import com.github.ajalt.mordant.input.InputReceiver.Status.Continue
 import com.github.ajalt.mordant.input.isCtrlC
 import com.github.ajalt.mordant.input.receiveKeyEvents
 import com.github.ajalt.mordant.terminal.Terminal
@@ -43,6 +44,15 @@ class FetchCommand : CliktCommand("fetch", "Fetch all RSS feeds") {
         val allItems = runBlocking { fetchAllItems() }
         if (allItems.isEmpty()) {
             terminal.muted("No items found in the RSS feeds.")
+            return
+        }
+
+        if (!terminal.terminalInfo.interactive) {
+            clearConsole()
+            terminal.info("Displaying all items:")
+            allItems.forEach { (title, date) ->
+                terminal.info("${dateFormat.format(date)} - $title")
+            }
             return
         }
 
@@ -91,11 +101,17 @@ class FetchCommand : CliktCommand("fetch", "Fetch all RSS feeds") {
     private fun paginateItems(allItems: List<Pair<String, Date>>) {
         var currentPage = 0
 
+        fun showPage() = displayPage(allItems, currentPage)
+
+        showPage()
+
         terminal.receiveKeyEvents { event ->
-            displayPage(allItems, currentPage)
+            terminal.muted("Key event: ${event.key}")
+            showPage()
+
             when {
-                event.isCtrlC -> InputReceiver.Status.Finished
-                event.key == "q" -> InputReceiver.Status.Finished
+                event.isCtrlC -> Finished
+                event.key == "q" -> Finished
                 else -> {
                     when (event.key) {
                         "RightArrow", "d" -> {
@@ -105,8 +121,10 @@ class FetchCommand : CliktCommand("fetch", "Fetch all RSS feeds") {
                             if (currentPage > 0) currentPage--
                         }
                     }
-                    InputReceiver.Status.Continue
+                    Continue
                 }
+            }.also {
+                showPage()
             }
         }
     }
