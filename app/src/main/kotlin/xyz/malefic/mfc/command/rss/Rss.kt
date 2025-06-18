@@ -1,11 +1,16 @@
 package xyz.malefic.mfc.command.rss
 
 import com.github.ajalt.clikt.parameters.arguments.argument
-import com.github.ajalt.mordant.rendering.TextColors.blue
-import com.github.ajalt.mordant.rendering.TextColors.gray
-import com.github.ajalt.mordant.rendering.TextColors.white
+import com.github.ajalt.mordant.input.InputReceiver
+import com.github.ajalt.mordant.input.isCtrlC
+import com.github.ajalt.mordant.input.receiveKeyEvents
 import com.github.ajalt.mordant.terminal.Terminal
+import com.github.ajalt.mordant.terminal.danger
+import com.github.ajalt.mordant.terminal.info
+import com.github.ajalt.mordant.terminal.muted
 import com.github.ajalt.mordant.terminal.prompt
+import com.github.ajalt.mordant.terminal.success
+import com.github.ajalt.mordant.terminal.warning
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
@@ -31,13 +36,13 @@ class FetchCommand : CliktCommand("fetch", "Fetch all RSS feeds") {
 
     override fun run() {
         if (rssURLs.isEmpty()) {
-            terminal.println(gray("No RSS URLs found."))
+            terminal.muted("No RSS URLs found.")
             return
         }
 
         val allItems = runBlocking { fetchAllItems() }
         if (allItems.isEmpty()) {
-            terminal.println(gray("No items found in the RSS feeds."))
+            terminal.muted("No items found in the RSS feeds.")
             return
         }
 
@@ -51,11 +56,10 @@ class FetchCommand : CliktCommand("fetch", "Fetch all RSS feeds") {
                 rssURLs.map { url ->
                     async {
                         try {
-                            val document = rss(url)
-                            parseItems(document, url)
+                            parseItems(rss(url), url)
                         } catch (e: Exception) {
-                            terminal.println(gray("Failed to fetch RSS feed from $url: ${e.message}"))
-                            emptyList<Pair<String, Date>>()
+                            terminal.warning("Failed to fetch RSS feed from $url: ${e.message}")
+                            emptyList()
                         }
                     }
                 }
@@ -86,15 +90,25 @@ class FetchCommand : CliktCommand("fetch", "Fetch all RSS feeds") {
 
     private fun paginateItems(allItems: List<Pair<String, Date>>) {
         var currentPage = 0
-        var shouldExit = false
 
-        while (!shouldExit) {
+        terminal.receiveKeyEvents { event ->
             displayPage(allItems, currentPage)
-            val input = readLine()?.trim()?.lowercase()
-            when (input) {
-                "w", "d" -> if ((currentPage + 1) * pageSize < allItems.size) currentPage++
-                "s", "a" -> if (currentPage > 0) currentPage--
-                "q" -> shouldExit = true
+            when {
+                event.isCtrlC -> InputReceiver.Status.Finished
+                event.key == "q" -> {
+                    InputReceiver.Status.Finished
+                }
+                else -> {
+                    when (event.key) {
+                        "RightArrow", "d" -> {
+                            if ((currentPage + 1) * pageSize < allItems.size) currentPage++
+                        }
+                        "LeftArrow", "a" -> {
+                            if (currentPage > 0) currentPage--
+                        }
+                    }
+                    InputReceiver.Status.Continue
+                }
             }
         }
     }
@@ -107,16 +121,16 @@ class FetchCommand : CliktCommand("fetch", "Fetch all RSS feeds") {
         val startIndex = currentPage * pageSize
         val endIndex = minOf(startIndex + pageSize, allItems.size)
 
-        terminal.println(blue("Displaying items ${startIndex + 1} to $endIndex:"))
+        terminal.info("Displaying items ${startIndex + 1} to $endIndex:")
         allItems.subList(startIndex, endIndex).forEach { (title, date) ->
-            terminal.println(white("${dateFormat.format(date)} - $title"))
+            terminal.info("${dateFormat.format(date)} - $title")
         }
 
         if (endIndex == allItems.size) {
-            terminal.println(gray("End of items."))
+            terminal.muted("End of items.")
         }
 
-        terminal.println(blue("Use 'w' or 'd' for next page, 's' or 'a' for previous page, or 'q' to quit."))
+        terminal.info("Use 'w' or 'd' for next page, 's' or 'a' for previous page, or 'q' to quit.")
     }
 }
 
@@ -126,11 +140,12 @@ class AddCommand : CliktCommand("add", "Add an RSS feed URL") {
 
     override fun run() {
         try {
+            terminal.info("Checking validity.")
             rss(url)
             rssURLs.add(url)
-            terminal.println(blue("Added RSS feed URL: $url"))
+            terminal.success("Added RSS feed URL: $url")
         } catch (e: Exception) {
-            terminal.println(gray("Invalid RSS feed URL: ${e.message}"))
+            terminal.danger("Invalid RSS feed URL: ${e.message}")
         }
     }
 }
@@ -140,12 +155,12 @@ class DeleteCommand : CliktCommand("delete", "Delete an RSS feed URL") {
 
     override fun run() {
         if (rssURLs.isEmpty()) {
-            terminal.println(gray("No RSS URLs found."))
+            terminal.muted("No RSS URLs found.")
             return
         }
 
         if (rssURLs.size == 1) {
-            terminal.println(gray("Only one RSS URL available. Deleting it."))
+            terminal.muted("Only one RSS URL available. Deleting it.")
             rssURLs.clear()
             return
         }
@@ -157,15 +172,25 @@ class DeleteCommand : CliktCommand("delete", "Delete an RSS feed URL") {
             )
 
         if (response == null) {
-            terminal.println(gray("No valid selection made."))
+            terminal.muted("No valid selection made.")
             return
         }
 
-        rssURLs.remove(response)
-        terminal.println(blue("Deleted RSS feed URL: $response"))
+        if (rssURLs.remove(response)) {
+            terminal.success("Deleted RSS feed URL: $response")
+        } else {
+            terminal.danger("RSS feed URL not found: $response")
+        }
     }
 }
 
+/**
+ * Fetches and parses the RSS feed from the given URL.
+ *
+ * @param url The URL of the RSS feed to fetch.
+ * @return The parsed XML Document representing the RSS feed.
+ * @throws Exception if the URL is invalid or the feed cannot be fetched or parsed.
+ */
 private fun rss(url: String): Document {
     val connection = URI(url).toURL().openConnection()
     val inputStream = connection.getInputStream()
