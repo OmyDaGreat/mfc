@@ -1,8 +1,21 @@
 package xyz.malefic.mfc.util
 
-import com.github.ajalt.clikt.core.BaseCliktCommand
+import com.github.ajalt.mordant.terminal.Terminal
 
-fun <T : BaseCliktCommand<T>> BaseCliktCommand<T>.clearConsole() {
+/**
+ * Clears the console screen in a cross-platform manner.
+ *
+ * This extension function attempts to clear the terminal screen for both Windows and Unix-like systems.
+ * - On Windows, it runs the `cls` command using `cmd.exe`.
+ * - On Unix-like systems, it checks the `TERM` environment variable:
+ *   - If the terminal type contains "xterm" or "vt", it prints the ANSI escape codes to clear the screen.
+ *   - Otherwise, it runs the `clear` command.
+ *
+ * If clearing the console fails, an error is thrown with the exception message.
+ *
+ * @receiver The Mordant Terminal instance on which to perform the clear operation.
+ */
+fun Terminal.clearConsole() {
     try {
         val os = System.getProperty("os.name").lowercase()
         if (os.contains("win")) {
@@ -17,6 +30,6 @@ fun <T : BaseCliktCommand<T>> BaseCliktCommand<T>.clearConsole() {
             }
         }
     } catch (e: Exception) {
-        echo("Failed to clear console: ${e.message}")
+        error("Failed to clear console: ${e.message}")
     }
 }

@@ -1,6 +1,5 @@
 package xyz.malefic.mfc.util
 
-import com.github.ajalt.clikt.command.CoreSuspendingCliktCommand
 import com.github.ajalt.clikt.core.Context
 import com.github.ajalt.clikt.core.CoreCliktCommand
 import com.github.ajalt.clikt.core.installMordant
@@ -26,43 +25,6 @@ abstract class CliktCommand(
      */
     val help: String = "",
 ) : CoreCliktCommand(name) {
-    init {
-        installMordant()
-    }
-
-    /**
-     * Overrides the default help text formatting.
-     *
-     * @param context The Clikt context containing theme information.
-     * @return The formatted help text.
-     */
-    override fun help(context: Context) = context.theme.info(help)
-}
-
-/**
- * A version of [CliktCommand] that supports a suspending [run] function.
- *
- * This abstract class extends [CoreSuspendingCliktCommand] to provide:
- * - Automatic installation of Mordant for enhanced terminal output.
- * - Customizable help text formatting using themes.
- *
- * @property name The name of the program to use in the help output. If not given, it is inferred from the class name.
- * @property help The help text displayed for the command.
- */
-abstract class SuspendingCliktCommand(
-    /**
-     * The name of the program to use in the help output. If not given, it is inferred from the
-     * class name.
-     */
-    name: String? = null,
-    /**
-     * The help text for the command, displayed in the help output.
-     */
-    val help: String = "",
-) : CoreSuspendingCliktCommand(name) {
-    /**
-     * Initializes the command and installs Mordant for enhanced terminal output.
-     */
     init {
         installMordant()
     }

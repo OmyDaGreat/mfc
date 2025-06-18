@@ -1,5 +1,6 @@
 package xyz.malefic.mfc.command.rss
 
+import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.mordant.input.InputReceiver.Status.Companion.Finished
 import com.github.ajalt.mordant.input.InputReceiver.Status.Continue
@@ -9,7 +10,6 @@ import com.github.ajalt.mordant.terminal.Terminal
 import com.github.ajalt.mordant.terminal.danger
 import com.github.ajalt.mordant.terminal.info
 import com.github.ajalt.mordant.terminal.muted
-import com.github.ajalt.mordant.terminal.prompt
 import com.github.ajalt.mordant.terminal.success
 import com.github.ajalt.mordant.terminal.warning
 import kotlinx.coroutines.async
@@ -18,6 +18,7 @@ import kotlinx.coroutines.runBlocking
 import org.w3c.dom.Document
 import org.w3c.dom.Element
 import xyz.malefic.mfc.util.CliktCommand
+import xyz.malefic.mfc.util.betterPrompt
 import xyz.malefic.mfc.util.clearConsole
 import xyz.malefic.mfc.util.rssURLs
 import java.net.URI
@@ -27,6 +28,10 @@ import java.util.Locale
 import javax.xml.parsers.DocumentBuilderFactory
 
 class RssCommand : CliktCommand("rss", "Manage RSS feeds") {
+    init {
+        subcommands(FetchCommand(), AddCommand(), DeleteCommand())
+    }
+
     override fun run() = Unit
 }
 
@@ -35,29 +40,30 @@ class FetchCommand : CliktCommand("fetch", "Fetch all RSS feeds") {
     private val dateFormat = SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss", Locale.ENGLISH)
     private val pageSize = 5
 
-    override fun run() {
-        if (rssURLs.isEmpty()) {
-            terminal.muted("No RSS URLs found.")
-            return
-        }
-
-        val allItems = runBlocking { fetchAllItems() }
-        if (allItems.isEmpty()) {
-            terminal.muted("No items found in the RSS feeds.")
-            return
-        }
-
-        if (!terminal.terminalInfo.interactive) {
-            clearConsole()
-            terminal.info("Displaying all items:")
-            allItems.forEach { (title, date) ->
-                terminal.info("${dateFormat.format(date)} - $title")
+    override fun run() =
+        with(terminal) {
+            if (rssURLs.isEmpty()) {
+                muted("No RSS URLs found.")
+                return
             }
-            return
-        }
 
-        paginateItems(allItems)
-    }
+            val allItems = runBlocking { fetchAllItems() }
+            if (allItems.isEmpty()) {
+                muted("No items found in the RSS feeds.")
+                return
+            }
+
+            if (!terminalInfo.interactive) {
+                clearConsole()
+                info("Displaying all items:")
+                allItems.forEach { (title, date) ->
+                    info("${dateFormat.format(date)} - $title")
+                }
+                return
+            }
+
+            paginateItems(allItems)
+        }
 
     private suspend fun fetchAllItems() =
         coroutineScope {
@@ -132,21 +138,21 @@ class FetchCommand : CliktCommand("fetch", "Fetch all RSS feeds") {
     private fun displayPage(
         allItems: List<Pair<String, Date>>,
         currentPage: Int,
-    ) {
+    ) = with(terminal) {
         clearConsole()
         val startIndex = currentPage * pageSize
         val endIndex = minOf(startIndex + pageSize, allItems.size)
 
-        terminal.info("Displaying items ${startIndex + 1} to $endIndex:")
+        info("Displaying items ${startIndex + 1} to $endIndex:")
         allItems.subList(startIndex, endIndex).forEach { (title, date) ->
-            terminal.info("${dateFormat.format(date)} - $title")
+            info("${dateFormat.format(date)} - $title")
         }
 
         if (endIndex == allItems.size) {
-            terminal.muted("End of items.")
+            muted("End of items.")
         }
 
-        terminal.info("Use the right arrow key or 'd' for next page, left arrow key or 'a' for previous page, or 'q' to quit.")
+        info("Use the right arrow key or 'd' for next page, left arrow key or 'a' for previous page, or 'q' to quit.")
     }
 }
 
@@ -182,9 +188,9 @@ class DeleteCommand : CliktCommand("delete", "Delete an RSS feed URL") {
         }
 
         val response =
-            terminal.prompt(
+            terminal.betterPrompt(
                 "Select an RSS feed URL to delete:",
-                choices = rssURLs,
+                rssURLs.toList(),
             )
 
         if (response == null) {
