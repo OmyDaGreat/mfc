@@ -5,6 +5,8 @@ import com.github.ajalt.mordant.rendering.TextColors.blue
 import com.github.ajalt.mordant.rendering.TextColors.gray
 import com.github.ajalt.mordant.rendering.TextColors.white
 import com.github.ajalt.mordant.terminal.Terminal
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import org.w3c.dom.Document
 import org.w3c.dom.Element
 import xyz.malefic.mfc.util.SuspendingCliktCommand
@@ -23,7 +25,7 @@ class RssCommand : SuspendingCliktCommand("rss", "Manage RSS feeds") {
 class FetchCommand : SuspendingCliktCommand("fetch", "Fetch all RSS feeds") {
     private val terminal = Terminal()
     private val dateFormat = SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss", Locale.ENGLISH)
-    private val pageSize = 2
+    private val pageSize = 5
 
     override suspend fun run() {
         if (rssURLs.isEmpty()) {
@@ -40,19 +42,29 @@ class FetchCommand : SuspendingCliktCommand("fetch", "Fetch all RSS feeds") {
         paginateItems(allItems)
     }
 
-    private fun fetchAllItems(): List<Pair<String, Date>> {
-        val allItems = mutableListOf<Pair<String, Date>>()
-        rssURLs.forEach { url ->
-            try {
-                val document = rss(url)
-                allItems.addAll(parseItems(document, url))
-            } catch (e: Exception) {
-                terminal.println(gray("Failed to fetch RSS feed from $url: ${e.message}"))
+    private suspend fun fetchAllItems(): List<Pair<String, Date>> =
+        coroutineScope {
+            val allItems = mutableListOf<Pair<String, Date>>()
+            val fetchJobs =
+                rssURLs.map { url ->
+                    async {
+                        try {
+                            val document = rss(url)
+                            parseItems(document, url)
+                        } catch (e: Exception) {
+                            terminal.println(gray("Failed to fetch RSS feed from $url: ${e.message}"))
+                            emptyList<Pair<String, Date>>()
+                        }
+                    }
+                }
+
+            fetchJobs.forEach { job ->
+                allItems.addAll(job.await())
             }
+
+            allItems.sortByDescending { it.second }
+            allItems
         }
-        allItems.sortByDescending { it.second }
-        return allItems
-    }
 
     private fun parseItems(
         document: Document,
@@ -78,8 +90,8 @@ class FetchCommand : SuspendingCliktCommand("fetch", "Fetch all RSS feeds") {
             displayPage(allItems, currentPage)
             val input = readLine()?.trim()?.lowercase()
             when (input) {
-                "n" -> if ((currentPage + 1) * pageSize < allItems.size) currentPage++
-                "p" -> if (currentPage > 0) currentPage--
+                "w", "d" -> if ((currentPage + 1) * pageSize < allItems.size) currentPage++
+                "s", "a" -> if (currentPage > 0) currentPage--
                 "q" -> shouldExit = true
             }
         }
@@ -102,7 +114,7 @@ class FetchCommand : SuspendingCliktCommand("fetch", "Fetch all RSS feeds") {
             terminal.println(gray("End of items."))
         }
 
-        terminal.println(blue("Use 'n' for next page, 'p' for previous page, or 'q' to quit."))
+        terminal.println(blue("Use 'w' or 'd' for next page, 's' or 'a' for previous page, or 'q' to quit."))
     }
 }
 
