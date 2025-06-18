@@ -40,7 +40,7 @@ jobs:
       - name: Setup Kotlin
         uses: fwilhe2/setup-kotlin@v1
         with:
-          version: '2.1.20'
+          version: '2.1.21'
 
       - name: Get current date
         id: date

@@ -11,13 +11,13 @@ repositories {
 dependencies {
     implementation(libs.bundles.ajalt)
     implementation(libs.prefs)
-    implementation(libs.coroutines)
+    implementation(libs.kotlinx.coroutines)
 }
 
 testing {
     suites {
         val test by getting(JvmTestSuite::class) {
-            useKotlinTest("2.1.20")
+            useKotlinTest("2.1.21")
         }
     }
 }

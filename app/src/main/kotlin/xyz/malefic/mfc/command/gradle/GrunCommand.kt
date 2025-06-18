@@ -2,14 +2,14 @@ package xyz.malefic.mfc.command.gradle
 
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.arguments.multiple
-import xyz.malefic.mfc.util.SuspendingCliktCommand
+import xyz.malefic.mfc.util.CliktCommand
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
-class GrunCommand : SuspendingCliktCommand("grun", "Run a Gradle task") {
+class GrunCommand : CliktCommand("grun", "Run a Gradle task") {
     private val args: List<String> by argument(help = "Arguments to pass to the Gradle task").multiple()
 
-    override suspend fun run() {
+    override fun run() {
         val gradleCommand =
             buildString {
                 append(".\\gradlew run")

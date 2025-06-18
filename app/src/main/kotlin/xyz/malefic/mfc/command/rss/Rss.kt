@@ -5,11 +5,13 @@ import com.github.ajalt.mordant.rendering.TextColors.blue
 import com.github.ajalt.mordant.rendering.TextColors.gray
 import com.github.ajalt.mordant.rendering.TextColors.white
 import com.github.ajalt.mordant.terminal.Terminal
+import com.github.ajalt.mordant.terminal.prompt
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.runBlocking
 import org.w3c.dom.Document
 import org.w3c.dom.Element
-import xyz.malefic.mfc.util.SuspendingCliktCommand
+import xyz.malefic.mfc.util.CliktCommand
 import xyz.malefic.mfc.util.clearConsole
 import xyz.malefic.mfc.util.rssURLs
 import java.net.URI
@@ -18,22 +20,22 @@ import java.util.Date
 import java.util.Locale
 import javax.xml.parsers.DocumentBuilderFactory
 
-class RssCommand : SuspendingCliktCommand("rss", "Manage RSS feeds") {
-    override suspend fun run() = Unit
+class RssCommand : CliktCommand("rss", "Manage RSS feeds") {
+    override fun run() = Unit
 }
 
-class FetchCommand : SuspendingCliktCommand("fetch", "Fetch all RSS feeds") {
+class FetchCommand : CliktCommand("fetch", "Fetch all RSS feeds") {
     private val terminal = Terminal()
     private val dateFormat = SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss", Locale.ENGLISH)
     private val pageSize = 5
 
-    override suspend fun run() {
+    override fun run() {
         if (rssURLs.isEmpty()) {
             terminal.println(gray("No RSS URLs found."))
             return
         }
 
-        val allItems = fetchAllItems()
+        val allItems = runBlocking { fetchAllItems() }
         if (allItems.isEmpty()) {
             terminal.println(gray("No items found in the RSS feeds."))
             return
@@ -118,11 +120,11 @@ class FetchCommand : SuspendingCliktCommand("fetch", "Fetch all RSS feeds") {
     }
 }
 
-class AddCommand : SuspendingCliktCommand("add", "Add an RSS feed URL") {
+class AddCommand : CliktCommand("add", "Add an RSS feed URL") {
     private val terminal = Terminal()
     private val url: String by argument(help = "URL of the RSS feed")
 
-    override suspend fun run() {
+    override fun run() {
         try {
             rss(url)
             rssURLs.add(url)
@@ -133,31 +135,34 @@ class AddCommand : SuspendingCliktCommand("add", "Add an RSS feed URL") {
     }
 }
 
-class DeleteCommand : SuspendingCliktCommand("delete", "Delete an RSS feed URL") {
+class DeleteCommand : CliktCommand("delete", "Delete an RSS feed URL") {
     private val terminal = Terminal()
 
-    override suspend fun run() {
+    override fun run() {
         if (rssURLs.isEmpty()) {
             terminal.println(gray("No RSS URLs found."))
             return
         }
 
-        terminal.println(blue("Select an RSS feed URL to delete:"))
-        rssURLs.forEachIndexed { index, url ->
-            terminal.println(white("$index: $url"))
-        }
-
-        terminal.println(blue("Enter the index of the URL to delete:"))
-        val input = readLine()?.toIntOrNull()
-
-        if (input == null || input !in rssURLs.indices) {
-            terminal.println(gray("Invalid index."))
+        if (rssURLs.size == 1) {
+            terminal.println(gray("Only one RSS URL available. Deleting it."))
+            rssURLs.clear()
             return
         }
 
-        val removedUrl = rssURLs.elementAt(input)
-        rssURLs.remove(removedUrl)
-        terminal.println(blue("Deleted RSS feed URL: $removedUrl"))
+        val response =
+            terminal.prompt(
+                "Select an RSS feed URL to delete:",
+                choices = rssURLs,
+            )
+
+        if (response == null) {
+            terminal.println(gray("No valid selection made."))
+            return
+        }
+
+        rssURLs.remove(response)
+        terminal.println(blue("Deleted RSS feed URL: $response"))
     }
 }
 
