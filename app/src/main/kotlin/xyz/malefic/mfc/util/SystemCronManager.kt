@@ -1,6 +1,6 @@
 package xyz.malefic.mfc.util
 
-import com.github.ajalt.mordant.rendering.BorderType.Companion.SQUARE_DOUBLE_SECTION_SEPARATOR
+import com.github.ajalt.mordant.rendering.BorderType.Companion.ROUNDED
 import com.github.ajalt.mordant.rendering.TextAlign.LEFT
 import com.github.ajalt.mordant.rendering.TextAlign.RIGHT
 import com.github.ajalt.mordant.rendering.TextColors.Companion.rgb
@@ -8,7 +8,6 @@ import com.github.ajalt.mordant.rendering.TextColors.brightBlue
 import com.github.ajalt.mordant.rendering.TextColors.brightRed
 import com.github.ajalt.mordant.rendering.TextColors.green
 import com.github.ajalt.mordant.rendering.TextStyles.bold
-import com.github.ajalt.mordant.rendering.TextStyles.dim
 import com.github.ajalt.mordant.table.Borders.ALL
 import com.github.ajalt.mordant.table.Borders.BOTTOM
 import com.github.ajalt.mordant.table.table
@@ -64,7 +63,7 @@ object SystemCronManager {
      * @property status The current status of the task.
      * @property logonMode The logon mode for the task.
      */
-    data class Task(
+    data class WindowsTask(
         val folder: String = "",
         val hostName: String = "",
         val taskName: String,
@@ -84,32 +83,34 @@ object SystemCronManager {
      * @return A string containing the formatted table of scheduled tasks.
      * @throws UnsupportedOperationException if the OS is not supported.
      */
-    fun tableTasks(): String {
-        val terminal = Terminal()
-        val tasks =
-            when {
-                isUnix() -> executeCommand("crontab -l")
-                isWindows() -> executeCommand("schtasks /query /fo LIST")
-                else -> throw UnsupportedOperationException("Unsupported operating system: $osName")
-            }
-
-        return when {
+    fun tableTasks(): String =
+        when {
             isWindows() -> {
+                val terminal = Terminal()
+                val tasks = executeCommand("schtasks /query /fo LIST")
                 val parsedTasks = parseWindowsTasks(tasks, terminal)
                 renderWindowsTasksTable(parsedTasks, terminal)
             }
             isUnix() -> {
+                val terminal = Terminal()
+                val tasks = executeCommand("crontab -l")
                 val parsedTasks = parseUnixTasks(tasks, terminal)
                 renderUnixTasksTable(parsedTasks, terminal)
             }
             else -> throw UnsupportedOperationException("Unsupported operating system: $osName")
         }
-    }
 
+    /**
+     * Parses the output of Windows Task Scheduler (`schtasks /query /fo LIST`) into a list of [WindowsTask] objects.
+     *
+     * @param tasks The list of output lines from the Task Scheduler command.
+     * @param terminal The Mordant [Terminal] for logging warnings or errors.
+     * @return A list of parsed [WindowsTask] objects.
+     */
     private fun parseWindowsTasks(
         tasks: List<String>,
         terminal: Terminal,
-    ): List<Task> =
+    ): List<WindowsTask> =
         tasks
             .fold(mutableListOf<MutableList<String>>()) { acc, line ->
                 if (line.isEmpty()) {
@@ -126,7 +127,7 @@ object SystemCronManager {
                     }.toMap()
             }.mapNotNull { task ->
                 try {
-                    Task(
+                    WindowsTask(
                         folder = task["Folder"] ?: "",
                         hostName = task["HostName"] ?: "",
                         taskName = task["TaskName"] ?: throw IllegalArgumentException("Missing TaskName"),
@@ -144,13 +145,20 @@ object SystemCronManager {
                 }
             }
 
+    /**
+     * Renders a formatted table of Windows scheduled tasks using the Mordant terminal library.
+     *
+     * @param tasks The list of [WindowsTask] objects to display.
+     * @param terminal The Mordant [Terminal] used for rendering.
+     * @return A string containing the formatted table.
+     */
     private fun renderWindowsTasksTable(
-        tasks: List<Task>,
+        tasks: List<WindowsTask>,
         terminal: Terminal,
     ): String =
         terminal.render(
             table {
-                borderType = SQUARE_DOUBLE_SECTION_SEPARATOR
+                borderType = ROUNDED
                 borderStyle = rgb("#4b25b9")
                 align = RIGHT
                 tableBorders = ALL
@@ -165,7 +173,7 @@ object SystemCronManager {
                         cellBorders = ALL
                         style = brightBlue
                     }
-                    tasks.forEach { task ->
+                    tasks.forEachIndexed { index, task ->
                         row(
                             task.folder,
                             task.hostName,
@@ -174,14 +182,21 @@ object SystemCronManager {
                             task.status,
                             task.logonMode,
                         ) {
-                            style = rgb("#e0e0e0")
+                            style = if (index % 2 == 0) rgb("#008080") else rgb("#00ced1")
                         }
                     }
                 }
-                captionBottom(dim("Total Tasks: ${tasks.size}"))
+                captionBottom("Total Tasks: ${tasks.size}")
             },
         )
 
+    /**
+     * Parses the output of the Unix `crontab -l` command into a list of [UnixTask] objects.
+     *
+     * @param tasks The list of crontab lines.
+     * @param terminal The Mordant [Terminal] for logging errors.
+     * @return A list of parsed [UnixTask] objects.
+     */
     private fun parseUnixTasks(
         tasks: List<String>,
         terminal: Terminal,
@@ -191,7 +206,7 @@ object SystemCronManager {
             if (parts.size == 6) {
                 UnixTask(
                     schedule = "${parts[0]} ${parts[1]} ${parts[2]} ${parts[3]} ${parts[4]}",
-                    command = parts[5],
+                    command = parts[5].takeUnless { parts[5].contains(" ") } ?: "\"${parts[5]}\"",
                 )
             } else {
                 terminal.danger("Failed to parse cron job: $line")
@@ -199,13 +214,20 @@ object SystemCronManager {
             }
         }
 
+    /**
+     * Renders a formatted table of Unix cron jobs using the Mordant terminal library.
+     *
+     * @param tasks The list of [UnixTask] objects to display.
+     * @param terminal The Mordant [Terminal] used for rendering.
+     * @return A string containing the formatted table.
+     */
     private fun renderUnixTasksTable(
         tasks: List<UnixTask>,
         terminal: Terminal,
     ): String =
         terminal.render(
             table {
-                borderType = SQUARE_DOUBLE_SECTION_SEPARATOR
+                borderType = ROUNDED
                 borderStyle = rgb("#4b25b9")
                 align = RIGHT
                 tableBorders = ALL
@@ -220,12 +242,12 @@ object SystemCronManager {
                         cellBorders = ALL
                         style = brightBlue
                     }
-                    tasks.forEach { task ->
+                    tasks.forEachIndexed { index, task ->
                         row(
                             task.schedule,
                             task.command,
                         ) {
-                            style = rgb("#e0e0e0")
+                            style = if (index % 2 == 0) rgb("#008080") else rgb("#00ced1")
                         }
                     }
                 }
@@ -257,14 +279,14 @@ object SystemCronManager {
      * On Unix-like systems, adds a cron job to the user's crontab.
      * On Windows, creates a scheduled task using Task Scheduler.
      *
-     * @param description The command or script to schedule.
+     * @param command The command or script to schedule.
      * @param schedule Optional custom schedule in the format "every:<duration>", e.g., "every:15m".
      * @param onStartup If true, schedules the task to run at system startup.
      *
      * @throws UnsupportedOperationException if the OS is not supported.
      */
     fun addTask(
-        description: String,
+        command: String,
         schedule: String? = null,
         onStartup: Boolean = true,
     ) {
@@ -272,26 +294,26 @@ object SystemCronManager {
         if (isUnix()) {
             val commands = mutableListOf<String>()
             if (onStartup) {
-                commands.add("@reboot $description")
+                commands.add("@reboot $command")
             }
             duration?.let {
                 val cronSchedule = convertDurationToCron(it)
-                commands.add("$cronSchedule $description")
+                commands.add("$cronSchedule $command")
             }
-            val command = "(crontab -l; echo \"${commands.joinToString("\n")}\") | crontab -"
-            executeCommand(command)
+            val cronCmd = "(crontab -l; echo \"${commands.joinToString("\n")}\") | crontab -"
+            executeCommand(cronCmd)
         } else if (isWindows()) {
-            val command =
+            val cronCmd =
                 if (onStartup && duration == null) {
-                    "schtasks /create /tn \"$description\" /tr \"$description\" /sc ONSTART"
+                    "schtasks /create /tn \"$command\" /tr \"$command\" /sc ONSTART"
                 } else if (onStartup) {
                     val windowsSchedule = convertDurationToWindows(duration!!)
-                    "schtasks /create /tn \"$description\" /tr \"$description\" /sc ONSTART & schtasks /create /tn \"$description\" /tr \"$description\" $windowsSchedule"
+                    "schtasks /create /tn \"$command\" /tr \"$command\" /sc ONSTART & schtasks /create /tn \"$command\" /tr \"$command\" $windowsSchedule"
                 } else {
                     val windowsSchedule = convertDurationToWindows(duration!!)
-                    "schtasks /create /tn \"$description\" /tr \"$description\" $windowsSchedule"
+                    "schtasks /create /tn \"$command\" /tr \"$command\" $windowsSchedule"
                 }
-            executeCommand(command)
+            executeCommand(cronCmd)
         } else {
             throw UnsupportedOperationException("Unsupported operating system: $osName")
         }

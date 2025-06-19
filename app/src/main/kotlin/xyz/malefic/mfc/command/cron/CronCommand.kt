@@ -13,44 +13,51 @@ import xyz.malefic.mfc.util.SystemCronManager
 import xyz.malefic.mfc.util.betterPrompt
 
 class CronCommand : CliktCommand("cron", "Manage scheduled tasks") {
-    private val terminal = Terminal()
-    override val invokeWithoutSubcommand = true
-
     init {
-        subcommands(AddCronCommand(), DeleteTaskCommand())
+        subcommands(ListCronCommand(), AddCronCommand(), DeleteTaskCommand())
     }
 
-    override fun run() {
-        try {
-            val tasksTable = SystemCronManager.tableTasks()
-            terminal.success("Scheduled tasks:")
-            terminal.println(tasksTable)
-        } catch (e: Exception) {
-            terminal.danger("Failed to retrieve tasks: ${e.message}")
+    override fun run() = Unit
+}
+
+class ListCronCommand : CliktCommand("list", "List all scheduled tasks") {
+    private val terminal = Terminal()
+
+    override fun run() =
+        with(terminal) {
+            try {
+                val tasksTable = SystemCronManager.tableTasks()
+                if (tasksTable.isEmpty()) {
+                    muted("No scheduled tasks found.")
+                } else {
+                    success("Scheduled tasks:")
+                    println(tasksTable)
+                }
+            } catch (e: Exception) {
+                danger("Failed to retrieve tasks: ${e.message}")
+            }
         }
-    }
 }
 
 class AddCronCommand : CliktCommand("add", "Add a scheduled task") {
     private val terminal = Terminal()
-    private val description: String by argument(help = "Description of the task")
-    private val schedule: String? by option(
-        help = "Schedule for the task in custom format (e.g., 'every:5m' for every 5 minutes)",
-    )
-    private val onStartup: Boolean by option("--on-startup", help = "Run the task at system startup").flag(default = false)
+    private val command: String by argument(help = "The task to run")
+    private val schedule: String? by option(help = "Schedule for the task with every:duration (e.g., 'every:5m' for every 5 minutes)")
+    private val onStartup: Boolean by option("--on-startup", help = "Run the task at system startup").flag("--until-off", default = false)
 
-    override fun run() {
-        try {
-            SystemCronManager.addTask(description, schedule, onStartup)
-            when {
-                onStartup && schedule == null -> terminal.success("Added startup-only task: $description")
-                onStartup -> terminal.success("Added startup task: $description with schedule: $schedule")
-                else -> terminal.success("Added task: $description with schedule: $schedule")
+    override fun run() =
+        with(terminal) {
+            try {
+                SystemCronManager.addTask(command, schedule, onStartup)
+                when {
+                    onStartup && schedule == null -> success("Added startup-only task: $command")
+                    onStartup -> success("Added startup task: $command with schedule: $schedule")
+                    else -> success("Added task: $command with schedule: $schedule")
+                }
+            } catch (e: Exception) {
+                danger("Failed to add task: ${e.message}")
             }
-        } catch (e: Exception) {
-            terminal.danger("Failed to add task: ${e.message}")
         }
-    }
 }
 
 class DeleteTaskCommand : CliktCommand("delete", "Delete a scheduled task") {
@@ -64,12 +71,7 @@ class DeleteTaskCommand : CliktCommand("delete", "Delete a scheduled task") {
                 return
             }
 
-            val response =
-                betterPrompt(
-                    "Select a task to delete:",
-                    tasks,
-                    enableNoneOption = true,
-                )
+            val response = betterPrompt("Select a task to delete:", tasks, enableNoneOption = true)
 
             if (response == null) {
                 muted("No valid selection made.")
