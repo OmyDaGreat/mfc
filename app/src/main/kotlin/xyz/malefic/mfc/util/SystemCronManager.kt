@@ -8,10 +8,13 @@ import com.github.ajalt.mordant.rendering.TextColors.brightBlue
 import com.github.ajalt.mordant.rendering.TextColors.brightRed
 import com.github.ajalt.mordant.rendering.TextColors.green
 import com.github.ajalt.mordant.rendering.TextStyles.bold
+import com.github.ajalt.mordant.rendering.TextStyles.dim
 import com.github.ajalt.mordant.table.Borders.ALL
 import com.github.ajalt.mordant.table.Borders.BOTTOM
 import com.github.ajalt.mordant.table.table
 import com.github.ajalt.mordant.terminal.Terminal
+import com.github.ajalt.mordant.terminal.danger
+import com.github.ajalt.mordant.terminal.warning
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import kotlin.time.Duration
@@ -41,6 +44,36 @@ object SystemCronManager {
     private fun isUnix(): Boolean = osName.contains("nix") || osName.contains("nux") || osName.contains("mac")
 
     /**
+     * Represents a Unix-like cron job entry.
+     *
+     * @property schedule The cron schedule expression.
+     * @property command The command to execute.
+     */
+    data class UnixTask(
+        val schedule: String,
+        val command: String,
+    )
+
+    /**
+     * Represents a Windows Task Scheduler entry.
+     *
+     * @property folder The folder containing the task.
+     * @property hostName The host name where the task is registered.
+     * @property taskName The name of the scheduled task.
+     * @property nextRunTime The next scheduled run time.
+     * @property status The current status of the task.
+     * @property logonMode The logon mode for the task.
+     */
+    data class Task(
+        val folder: String = "",
+        val hostName: String = "",
+        val taskName: String,
+        val nextRunTime: String,
+        val status: String,
+        val logonMode: String,
+    )
+
+    /**
      * Lists the scheduled tasks for the current operating system.
      *
      * On Unix-like systems, retrieves the user's crontab entries.
@@ -54,23 +87,76 @@ object SystemCronManager {
     fun tableTasks(): String {
         val terminal = Terminal()
         val tasks =
-            if (isUnix()) {
-                executeCommand("crontab -l")
-            } else if (isWindows()) {
-                executeCommand("schtasks /query /fo LIST")
-            } else {
-                throw UnsupportedOperationException("Unsupported operating system: $osName")
+            when {
+                isUnix() -> executeCommand("crontab -l")
+                isWindows() -> executeCommand("schtasks /query /fo LIST")
+                else -> throw UnsupportedOperationException("Unsupported operating system: $osName")
             }
 
-        return terminal.render(
+        return when {
+            isWindows() -> {
+                val parsedTasks = parseWindowsTasks(tasks, terminal)
+                renderWindowsTasksTable(parsedTasks, terminal)
+            }
+            isUnix() -> {
+                val parsedTasks = parseUnixTasks(tasks, terminal)
+                renderUnixTasksTable(parsedTasks, terminal)
+            }
+            else -> throw UnsupportedOperationException("Unsupported operating system: $osName")
+        }
+    }
+
+    private fun parseWindowsTasks(
+        tasks: List<String>,
+        terminal: Terminal,
+    ): List<Task> =
+        tasks
+            .fold(mutableListOf<MutableList<String>>()) { acc, line ->
+                if (line.isEmpty()) {
+                    if (acc.lastOrNull()?.isNotEmpty() == true) acc.add(mutableListOf())
+                } else {
+                    acc.lastOrNull()?.add(line) ?: acc.add(mutableListOf(line))
+                }
+                acc
+            }.map { group ->
+                group
+                    .mapNotNull { line ->
+                        val parts = line.split(":", limit = 2)
+                        if (parts.size == 2) parts[0].trim() to parts[1].trim() else null
+                    }.toMap()
+            }.mapNotNull { task ->
+                try {
+                    Task(
+                        folder = task["Folder"] ?: "",
+                        hostName = task["HostName"] ?: "",
+                        taskName = task["TaskName"] ?: throw IllegalArgumentException("Missing TaskName"),
+                        nextRunTime = task["Next Run Time"] ?: throw IllegalArgumentException("Missing Next Run Time"),
+                        status = task["Status"] ?: throw IllegalArgumentException("Missing Status"),
+                        logonMode = task["Logon Mode"] ?: throw IllegalArgumentException("Missing Logon Mode"),
+                    )
+                } catch (e: IllegalArgumentException) {
+                    if (task["INFO"] == "There are no scheduled tasks presently available at your access level.") {
+                        terminal.warning("You don't have access to the task in folder ${task["Folder"]}")
+                    } else {
+                        terminal.danger("Failed to map task: ${e.message} for task $task")
+                    }
+                    null
+                }
+            }
+
+    private fun renderWindowsTasksTable(
+        tasks: List<Task>,
+        terminal: Terminal,
+    ): String =
+        terminal.render(
             table {
                 borderType = SQUARE_DOUBLE_SECTION_SEPARATOR
                 borderStyle = rgb("#4b25b9")
                 align = RIGHT
                 tableBorders = ALL
                 header {
-                    style = brightRed + bold on rgb("#f0f0f0")
-                    row("Task Name", "Schedule", "Startup", "Command") { cellBorders = BOTTOM }
+                    style = brightRed + bold
+                    row("Folder", "Host Name", "Task Name", "Next Run Time", "Status", "Logon Mode") { cellBorders = BOTTOM }
                 }
                 body {
                     style = green
@@ -79,10 +165,67 @@ object SystemCronManager {
                         cellBorders = ALL
                         style = brightBlue
                     }
-                    tasks.forEachIndexed { index, task ->
-                        val parts = task.split("\t")
-                        row(parts[0], parts[1], parts[2], parts[3]) {
-                            style = if (index % 2 == 0) rgb("#e0e0e0") else rgb("#ffffff")
+                    tasks.forEach { task ->
+                        row(
+                            task.folder,
+                            task.hostName,
+                            task.taskName,
+                            task.nextRunTime,
+                            task.status,
+                            task.logonMode,
+                        ) {
+                            style = rgb("#e0e0e0")
+                        }
+                    }
+                }
+                captionBottom(dim("Total Tasks: ${tasks.size}"))
+            },
+        )
+
+    private fun parseUnixTasks(
+        tasks: List<String>,
+        terminal: Terminal,
+    ): List<UnixTask> =
+        tasks.mapNotNull { line ->
+            val parts = line.split(" ", limit = 6)
+            if (parts.size == 6) {
+                UnixTask(
+                    schedule = "${parts[0]} ${parts[1]} ${parts[2]} ${parts[3]} ${parts[4]}",
+                    command = parts[5],
+                )
+            } else {
+                terminal.danger("Failed to parse cron job: $line")
+                null
+            }
+        }
+
+    private fun renderUnixTasksTable(
+        tasks: List<UnixTask>,
+        terminal: Terminal,
+    ): String =
+        terminal.render(
+            table {
+                borderType = SQUARE_DOUBLE_SECTION_SEPARATOR
+                borderStyle = rgb("#4b25b9")
+                align = RIGHT
+                tableBorders = ALL
+                header {
+                    style = brightRed + bold
+                    row("Schedule", "Command") { cellBorders = BOTTOM }
+                }
+                body {
+                    style = green
+                    column(0) {
+                        align = LEFT
+                        cellBorders = ALL
+                        style = brightBlue
+                    }
+                    tasks.forEach { task ->
+                        row(
+                            task.schedule,
+                            task.command,
+                        ) {
+                            style = rgb("#e0e0e0")
                         }
                     }
                 }
@@ -92,7 +235,6 @@ object SystemCronManager {
                 }
             },
         )
-    }
 
     /**
      * Lists all scheduled tasks for the current operating system.
