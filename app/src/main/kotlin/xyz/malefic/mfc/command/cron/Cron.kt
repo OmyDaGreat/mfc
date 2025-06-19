@@ -9,8 +9,8 @@ import com.github.ajalt.mordant.terminal.danger
 import com.github.ajalt.mordant.terminal.muted
 import com.github.ajalt.mordant.terminal.success
 import xyz.malefic.mfc.util.CliktCommand
-import xyz.malefic.mfc.util.SystemCronManager
 import xyz.malefic.mfc.util.betterPrompt
+import xyz.malefic.mfc.util.cron.SystemCronManager
 
 class CronCommand : CliktCommand("cron", "Manage scheduled tasks") {
     init {

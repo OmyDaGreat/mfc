@@ -10,6 +10,7 @@ scopes:
     - core
     - rss
     - cron
+    - todo
     - gradle
     - project
   chore:

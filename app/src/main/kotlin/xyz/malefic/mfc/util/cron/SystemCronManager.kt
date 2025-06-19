@@ -1,15 +1,10 @@
-package xyz.malefic.mfc.util
+package xyz.malefic.mfc.util.cron
 
-import com.github.ajalt.mordant.rendering.BorderType.Companion.ROUNDED
-import com.github.ajalt.mordant.rendering.TextAlign.LEFT
-import com.github.ajalt.mordant.rendering.TextAlign.RIGHT
-import com.github.ajalt.mordant.rendering.TextColors.Companion.rgb
-import com.github.ajalt.mordant.rendering.TextColors.brightBlue
-import com.github.ajalt.mordant.rendering.TextColors.brightRed
-import com.github.ajalt.mordant.rendering.TextColors.green
-import com.github.ajalt.mordant.rendering.TextStyles.bold
-import com.github.ajalt.mordant.table.Borders.ALL
-import com.github.ajalt.mordant.table.Borders.BOTTOM
+import com.github.ajalt.mordant.rendering.BorderType
+import com.github.ajalt.mordant.rendering.TextAlign
+import com.github.ajalt.mordant.rendering.TextColors
+import com.github.ajalt.mordant.rendering.TextStyles
+import com.github.ajalt.mordant.table.Borders
 import com.github.ajalt.mordant.table.table
 import com.github.ajalt.mordant.terminal.Terminal
 import com.github.ajalt.mordant.terminal.danger
@@ -158,20 +153,22 @@ object SystemCronManager {
     ): String =
         terminal.render(
             table {
-                borderType = ROUNDED
-                borderStyle = rgb("#4b25b9")
-                align = RIGHT
-                tableBorders = ALL
+                borderType = BorderType.Companion.ROUNDED
+                borderStyle = TextColors.Companion.rgb("#4b25b9")
+                align = TextAlign.RIGHT
+                tableBorders = Borders.ALL
                 header {
-                    style = brightRed + bold
-                    row("Folder", "Host Name", "Task Name", "Next Run Time", "Status", "Logon Mode") { cellBorders = BOTTOM }
+                    style = TextColors.brightRed + TextStyles.bold
+                    row("Folder", "Host Name", "Task Name", "Next Run Time", "Status", "Logon Mode") {
+                        cellBorders = Borders.BOTTOM
+                    }
                 }
                 body {
-                    style = green
+                    style = TextColors.green
                     column(0) {
-                        align = LEFT
-                        cellBorders = ALL
-                        style = brightBlue
+                        align = TextAlign.LEFT
+                        cellBorders = Borders.ALL
+                        style = TextColors.brightBlue
                     }
                     tasks.forEachIndexed { index, task ->
                         row(
@@ -182,7 +179,8 @@ object SystemCronManager {
                             task.status,
                             task.logonMode,
                         ) {
-                            style = if (index % 2 == 0) rgb("#008080") else rgb("#00ced1")
+                            style =
+                                if (index % 2 == 0) TextColors.Companion.rgb("#008080") else TextColors.Companion.rgb("#00ced1")
                         }
                     }
                 }
@@ -227,32 +225,32 @@ object SystemCronManager {
     ): String =
         terminal.render(
             table {
-                borderType = ROUNDED
-                borderStyle = rgb("#4b25b9")
-                align = RIGHT
-                tableBorders = ALL
+                borderType = BorderType.Companion.ROUNDED
+                borderStyle = TextColors.Companion.rgb("#4b25b9")
+                align = TextAlign.RIGHT
+                tableBorders = Borders.ALL
                 header {
-                    style = brightRed + bold
-                    row("Schedule", "Command") { cellBorders = BOTTOM }
+                    style = TextColors.brightRed + TextStyles.bold
+                    row("Schedule", "Command") { cellBorders = Borders.BOTTOM }
                 }
                 body {
-                    style = green
+                    style = TextColors.green
                     column(0) {
-                        align = LEFT
-                        cellBorders = ALL
-                        style = brightBlue
+                        align = TextAlign.LEFT
+                        cellBorders = Borders.ALL
+                        style = TextColors.brightBlue
                     }
                     tasks.forEachIndexed { index, task ->
                         row(
                             task.schedule,
                             task.command,
                         ) {
-                            style = if (index % 2 == 0) rgb("#008080") else rgb("#00ced1")
+                            style = if (index % 2 == 0) TextColors.Companion.rgb("#008080") else TextColors.Companion.rgb("#00ced1")
                         }
                     }
                 }
                 footer {
-                    style = bold + brightBlue
+                    style = TextStyles.bold + TextColors.brightBlue
                     row("Total Tasks: ${tasks.size}")
                 }
             },
@@ -323,13 +321,13 @@ object SystemCronManager {
      * Parses a custom schedule string in the format "every:<duration>".
      *
      * @param schedule The schedule string to parse.
-     * @return The parsed [Duration].
+     * @return The parsed [kotlin.time.Duration].
      * @throws IllegalArgumentException if the format is invalid.
      */
     private fun parseCustomSchedule(schedule: String): Duration {
         val parts = schedule.split(":")
         require(parts.size == 2 && parts[0] == "every") { "Invalid schedule format. Use 'every:<duration>'." }
-        return Duration.parse(parts[1])
+        return Duration.Companion.parse(parts[1])
     }
 
     /**

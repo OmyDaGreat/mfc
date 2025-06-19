@@ -9,6 +9,7 @@ import com.github.ajalt.mordant.terminal.Terminal
 import xyz.malefic.mfc.command.cron.CronCommand
 import xyz.malefic.mfc.command.gradle.GrunCommand
 import xyz.malefic.mfc.command.rss.RssCommand
+import xyz.malefic.mfc.command.todo.TodoCommand
 import xyz.malefic.mfc.util.CliktCommand
 
 /**
@@ -19,7 +20,7 @@ fun main(args: Array<String>) =
     Runner()
         .context {
             terminal = Terminal(ansiLevel = AnsiLevel.TRUECOLOR, interactive = true)
-        }.subcommands(GrunCommand(), RssCommand(), CronCommand())
+        }.subcommands(GrunCommand(), RssCommand(), CronCommand(), TodoCommand())
         .main(args)
 
 class Runner : CliktCommand() {
