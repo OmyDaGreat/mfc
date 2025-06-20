@@ -236,7 +236,7 @@ jobs:
           FORMULA_PATH: Formula/mfc.rb
           GH_TOKEN: ${{ secrets.REPO_ACCESS_TOKEN }}
         run: |
-          git clone https://github.com/$HOMEBREW_TAP_REPO.git
+          git clone https://x-access-token:${GH_TOKEN}@github.com/$HOMEBREW_TAP_REPO.git
           cd homebrew-mfc
           # Update the formula (sed replace url and sha256)
           sed -i "s|url \".*\"|url \"https://github.com/OmyDaGreat/mfc/releases/download/${{ steps.version.outputs.tag }}/mfc-${{ steps.version.outputs.version }}.zip\"|" $FORMULA_PATH
