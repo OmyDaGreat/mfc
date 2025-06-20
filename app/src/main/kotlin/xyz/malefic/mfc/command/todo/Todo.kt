@@ -28,6 +28,7 @@ import xyz.malefic.mfc.util.checkInteractive
 import xyz.malefic.mfc.util.todo.TodoManager
 import xyz.malefic.mfc.util.todo.TodoManager.TodoTask
 import xyz.malefic.mfc.util.todo.TodoManager.tasks
+import xyz.malefic.mfc.util.todo.getParsedDate
 import java.time.LocalDate
 import java.time.format.DateTimeParseException
 
@@ -107,8 +108,8 @@ class TodoCommand :
                         "complete" -> CompleteTodoCommand().checkHelp()
                         else -> danger("Unknown command: $commandName")
                     }
-                } catch (_: Exception) {
-                    warning("Something didn't quite work as expected. Ending the command...")
+                } catch (e: Exception) {
+                    warning("Something didn't quite work as expected: ${e.message}")
                 }
             }
         }
@@ -124,29 +125,23 @@ class AddTodoCommand : CliktCommand("add", "Add a new todo item") {
         help = "The due date for the task (format: YYYY-MM-DD or MM-DD)",
     )
 
-    override fun run() {
-        try {
-            val parsedDate =
-                dueDate?.let {
-                    try {
-                        if (it.matches(Regex("\\d{2}-\\d{2}"))) {
-                            val currentYear = LocalDate.now().year
-                            LocalDate.parse("$currentYear-$it")
-                        } else {
-                            LocalDate.parse(it)
-                        }
-                    } catch (_: DateTimeParseException) {
-                        terminal.danger("Invalid date format. Use YYYY-MM-DD or MM-DD.")
-                        return
-                    }
+    override fun run() =
+        with(terminal) {
+            try {
+                val parsedDate: LocalDate?
+                try {
+                    parsedDate = dueDate.getParsedDate()
+                } catch (_: DateTimeParseException) {
+                    danger("Invalid date format. Use YYYY-MM-DD or MM-DD.")
+                    return
                 }
-            val single = task.reduce { acc, string -> "$acc $string" }
-            TodoManager.addTask(single, parsedDate)
-            terminal.success("Added todo: $single${if (parsedDate != null) " (Due: $parsedDate)" else ""}")
-        } catch (e: Exception) {
-            terminal.danger("Failed to add todo: ${e.message}")
+                val single = task.reduce { acc, string -> "$acc $string" }
+                TodoManager.addTask(single, parsedDate)
+                success("Added todo: $single${parsedDate?.let { " (Due: $it)" } ?: ""}")
+            } catch (e: Exception) {
+                danger("Failed to add todo: ${e.message}")
+            }
         }
-    }
 }
 
 class ListTodoCommand : CliktCommand("list", "List all todo items") {
@@ -199,7 +194,7 @@ class ListTodoCommand : CliktCommand("list", "List all todo items") {
 
 class DeleteTodoCommand : CliktCommand("delete", "Delete a todo item") {
     private val terminal = Terminal()
-    private val task by argument(help = "The task description").optional()
+    private val task by argument(help = "The task description").multiple().optional()
 
     override fun run() =
         with(terminal) {
@@ -207,7 +202,10 @@ class DeleteTodoCommand : CliktCommand("delete", "Delete a todo item") {
                 muted("No todo items found.")
                 return
             }
-            task?.let {
+
+            val todo = task?.reduce { acc, string -> "$acc $string" }
+
+            todo?.let {
                 handleSpecificTask(it)
             } ?: handleInteractiveCompletion()
         }
@@ -240,14 +238,13 @@ class DeleteTodoCommand : CliktCommand("delete", "Delete a todo item") {
             handleSpecificTask(response)
         } catch (e: Exception) {
             danger("Failed to delete todo: ${e.message}")
-            e.printStackTrace()
         }
     }
 }
 
 class CompleteTodoCommand : CliktCommand("complete", "Mark a todo item as complete") {
     private val terminal = Terminal()
-    private val task by argument(help = "The task description").optional()
+    private val task by argument(help = "The task description").multiple().optional()
 
     override fun run() =
         with(terminal) {
@@ -256,7 +253,9 @@ class CompleteTodoCommand : CliktCommand("complete", "Mark a todo item as comple
                 return
             }
 
-            task?.let {
+            val todo = task?.reduce { acc, string -> "$acc $string" }
+
+            todo?.let {
                 handleSpecificTask(it)
             } ?: handleInteractiveCompletion()
         }
@@ -300,7 +299,7 @@ class CompleteTodoCommand : CliktCommand("complete", "Mark a todo item as comple
 
 class IncompleteTodoCommand : CliktCommand("incomplete", "Mark a todo item as incomplete") {
     private val terminal = Terminal()
-    private val task by argument(help = "The task description").optional()
+    private val task by argument(help = "The task description").multiple().optional()
 
     override fun run() =
         with(terminal) {
@@ -309,7 +308,9 @@ class IncompleteTodoCommand : CliktCommand("incomplete", "Mark a todo item as in
                 return
             }
 
-            task?.let {
+            val todo = task?.reduce { acc, string -> "$acc $string" }
+
+            todo?.let {
                 handleSpecificTask(it)
             } ?: handleInteractiveCompletion()
         }
