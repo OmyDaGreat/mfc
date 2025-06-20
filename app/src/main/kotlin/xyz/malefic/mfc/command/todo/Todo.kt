@@ -24,6 +24,7 @@ import com.github.ajalt.mordant.terminal.success
 import com.github.ajalt.mordant.terminal.warning
 import xyz.malefic.mfc.util.CliktCommand
 import xyz.malefic.mfc.util.betterPrompt
+import xyz.malefic.mfc.util.checkInteractive
 import xyz.malefic.mfc.util.todo.TodoManager
 import xyz.malefic.mfc.util.todo.TodoManager.TodoTask
 import xyz.malefic.mfc.util.todo.TodoManager.tasks
@@ -51,8 +52,8 @@ class TodoCommand :
               Example: `mfc todo delete`
             - `complete`: Mark a todo item as complete. Supports interactive selection.
               Example: `mfc todo complete Buy groceries`
-            - `uncomplete`: Mark a todo item as uncomplete. Supports interactive selection.
-              Example: `mfc todo uncomplete`
+            - `incomplete`: Mark a todo item as incomplete. Supports interactive selection.
+              Example: `mfc todo incomplete`
             """.trimIndent(),
     ) {
     init {
@@ -61,7 +62,7 @@ class TodoCommand :
             ListTodoCommand(),
             DeleteTodoCommand(),
             CompleteTodoCommand(),
-            UnCompleteTodoCommand(),
+            IncompleteTodoCommand(),
         )
     }
 
@@ -73,10 +74,7 @@ class TodoCommand :
                 return
             }
 
-            if (!terminalInfo.interactive) {
-                danger("Interactive mode is not supported in non-interactive terminals.")
-                return
-            }
+            if (checkInteractive()) return
 
             info("Entering interactive todo mode. Type commands prefixed with 'mfc todo' automatically, or 'q' to exit.")
 
@@ -119,7 +117,12 @@ class TodoCommand :
 class AddTodoCommand : CliktCommand("add", "Add a new todo item") {
     private val terminal = Terminal()
     private val task: List<String> by argument(help = "The task description").multiple(required = true)
-    private val dueDate: String? by option("--dueDate", "--due-date", help = "The due date for the task (format: YYYY-MM-DD or MM-DD)")
+    private val dueDate: String? by option(
+        "--due",
+        "--dueDate",
+        "--due-date",
+        help = "The due date for the task (format: YYYY-MM-DD or MM-DD)",
+    )
 
     override fun run() {
         try {
@@ -218,10 +221,7 @@ class DeleteTodoCommand : CliktCommand("delete", "Delete a todo item") {
     }
 
     private fun Terminal.handleInteractiveCompletion() {
-        if (!terminalInfo.interactive) {
-            danger("Interactive mode is not supported in non-interactive terminals.")
-            return
-        }
+        if (checkInteractive()) return
 
         try {
             val response =
@@ -251,6 +251,11 @@ class CompleteTodoCommand : CliktCommand("complete", "Mark a todo item as comple
 
     override fun run() =
         with(terminal) {
+            if (tasks.none { !it.completed }) {
+                muted("No incomplete todo items found.")
+                return
+            }
+
             task?.let {
                 handleSpecificTask(it)
             } ?: handleInteractiveCompletion()
@@ -270,10 +275,7 @@ class CompleteTodoCommand : CliktCommand("complete", "Mark a todo item as comple
     }
 
     private fun Terminal.handleInteractiveCompletion() {
-        if (tasks.none { !it.completed }) {
-            muted("No incomplete todo items found.")
-            return
-        }
+        if (checkInteractive()) return
 
         val response = betterPrompt("Select a todo to mark as complete:", tasks.map { it.description }, true, "Exit")
         if (response == null || response == "Exit") {
@@ -296,12 +298,17 @@ class CompleteTodoCommand : CliktCommand("complete", "Mark a todo item as comple
     }
 }
 
-class UnCompleteTodoCommand : CliktCommand("uncomplete", "Mark a todo item as uncomplete") {
+class IncompleteTodoCommand : CliktCommand("incomplete", "Mark a todo item as incomplete") {
     private val terminal = Terminal()
     private val task by argument(help = "The task description").optional()
 
     override fun run() =
         with(terminal) {
+            if (tasks.none { it.completed }) {
+                muted("No complete todo items found.")
+                return
+            }
+
             task?.let {
                 handleSpecificTask(it)
             } ?: handleInteractiveCompletion()
@@ -317,32 +324,29 @@ class UnCompleteTodoCommand : CliktCommand("uncomplete", "Mark a todo item as un
             muted("Todo item is already marked as complete: $task")
             return
         }
-        markTaskAsUncomplete(task)
+        markTaskAsincomplete(task)
     }
 
     private fun Terminal.handleInteractiveCompletion() {
-        if (tasks.none { it.completed }) {
-            muted("No complete todo items found.")
-            return
-        }
+        if (checkInteractive()) return
 
-        val response = betterPrompt("Select a todo to mark as uncomplete:", tasks.map { it.description }, true, "Exit")
+        val response = betterPrompt("Select a todo to mark as incomplete:", tasks.map { it.description }, true, "Exit")
         if (response == null || response == "Exit") {
             muted("No selection made.")
             return
         }
 
-        markTaskAsUncomplete(response)
+        markTaskAsincomplete(response)
     }
 
     private fun findTask(description: String): TodoTask? = tasks.find { it.description == description }
 
-    private fun Terminal.markTaskAsUncomplete(task: String) {
+    private fun Terminal.markTaskAsincomplete(task: String) {
         try {
             TodoManager.uncompleteTask(task)
-            success("Marked todo as uncomplete: $task")
+            success("Marked todo as incomplete: $task")
         } catch (e: Exception) {
-            danger("Failed to mark todo as uncomplete: ${e.message}")
+            danger("Failed to mark todo as incomplete: ${e.message}")
         }
     }
 }
