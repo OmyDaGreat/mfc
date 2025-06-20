@@ -34,6 +34,17 @@ scoop bucket add malefic https://github.com/OmyDaGreat/MaleficBucket
 scoop install mfc
 ----
 
+=== Using Homebrew (MacOS and Linux)
+
+[source,sh]
+----
+# Add the Malefic tap to Homebrew
+brew tap OmyDaGreat/malefic
+
+# Install mfc
+brew install mfc
+----
+
 === Manual Installation
 
 * Download the latest release from the link:https://github.com/OmyDaGreat/mfc/releases[GitHub Releases page]
