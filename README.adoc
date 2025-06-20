@@ -10,16 +10,20 @@ A Kotlin-based terminal application for managing Gradle tasks, RSS feeds, and sc
 **	grun: Run Gradle Tasks
 **	rss: Manage RSS Feeds
 **	cron: Manage Scheduled Tasks
+** todo: Manage Your Todos
 * Contributing
 * License
 
 == Overview
 
-mfc is a multi-purpose terminal application built in Kotlin. It provides commands for:
+mfc is a multipurpose terminal application built in Kotlin.
+
+It provides commands for:
 
 * Running Gradle tasks from the command line.
 * Subscribing to, fetching, and managing RSS feeds.
 * Scheduling and managing recurring or startup tasks (cross-platform).
+* Managing todos with optional due dates and interactive selection.
 
 == Installation
 
@@ -151,6 +155,76 @@ cron add "echo Hello" --on-startup
 cron delete
 ----
 * Prompts to select a task from the list to remove.
+
+=== todo: Manage Your Todos
+
+Manage your todos interactively or via subcommands.
+
+.Main Command
+----
+todo <subcommand>
+----
+
+.Subcommands:
+
+* **add**: Add a new todo item.
+* Usage:
+----
+todo add <task description> [--due-date <YYYY-MM-DD>]
+----
+* `<task description>`: The description of the task (required).
+* `--dueDate`: The due date for the task in `YYYY-MM-DD` or `MM-DD` format (optional).
+* Example:
+----
+todo add Buy groceries --due-date 2023-10-15
+----
+* Adds a new todo item with an optional due date.
+
+* **list**: List all todo items.
+* Usage:
+----
+todo list
+----
+* Displays all todo items in a table format, including their status and due dates.
+
+* **delete**: Delete a todo item.
+* Usage:
+----
+todo delete [<task description>]
+----
+* `<task description>`: The description of the task to delete (optional).
+* If no description is provided, prompts the user to select a task interactively.
+* Example:
+----
+todo delete Buy groceries
+----
+* Deletes the specified task or allows interactive selection.
+
+* **complete**: Mark a todo item as complete.
+* Usage:
+----
+todo complete [<task description>]
+----
+* `<task description>`: The description of the task to mark as complete (optional).
+* If no description is provided, prompts the user to select a task interactively.
+* Example:
+----
+todo complete Buy groceries
+----
+* Marks the specified task as complete.
+
+* **incomplete**: Mark a todo item as incomplete.
+* Usage:
+----
+todo incomplete [<task description>]
+----
+* `<task description>`: The description of the task to mark as incomplete (optional).
+* If no description is provided, prompts the user to select a task interactively.
+* Example:
+----
+todo incomplete Buy groceries
+----
+* Marks the specified task as incomplete.
 
 == License
 
