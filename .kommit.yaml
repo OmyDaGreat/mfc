@@ -19,7 +19,8 @@ scopes:
     - build
     - ci
     - deps
-    - tools
+    - scoop
+    - brew
 
 options:
   allowBreakingChanges:

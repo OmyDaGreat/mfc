@@ -24,7 +24,7 @@ import com.github.ajalt.mordant.terminal.success
 import com.github.ajalt.mordant.terminal.warning
 import xyz.malefic.mfc.util.CliktCommand
 import xyz.malefic.mfc.util.betterPrompt
-import xyz.malefic.mfc.util.checkInteractive
+import xyz.malefic.mfc.util.checkNonInteractive
 import xyz.malefic.mfc.util.todo.TodoManager
 import xyz.malefic.mfc.util.todo.TodoManager.TodoTask
 import xyz.malefic.mfc.util.todo.TodoManager.tasks
@@ -34,28 +34,27 @@ import java.time.format.DateTimeParseException
 
 class TodoCommand :
     CliktCommand(
-        name = "todo",
-        help =
-            """
-            Manage your todo list interactively or via subcommands.
+        "todo",
+        """
+        Manage your todo list interactively or via subcommands.
 
-            Interactive Mode:
-            - Enter interactive mode by running `mfc todo` without any subcommands.
-            - Type commands directly (e.g., `add`, `list`, `delete`, `complete`) or use `q` to exit.
-            - Use `--help` after a command to see usage instructions.
+        Interactive Mode:
+        - Enter interactive mode by running `mfc todo` without any subcommands.
+        - Type commands directly (e.g., `add`, `list`, `delete`, `complete`) or use `q` to exit.
+        - Use `--help` after a command to see usage instructions.
 
-            Subcommands:
-            - `add`: Add a new todo item.
-              Example: `mfc todo add Buy groceries --dueDate 2023-10-15`
-            - `list`: List all todo items.
-              Example: `mfc todo list`
-            - `delete`: Delete a todo item.
-              Example: `mfc todo delete`
-            - `complete`: Mark a todo item as complete. Supports interactive selection.
-              Example: `mfc todo complete Buy groceries`
-            - `incomplete`: Mark a todo item as incomplete. Supports interactive selection.
-              Example: `mfc todo incomplete`
-            """.trimIndent(),
+        Subcommands:
+        - `add`: Add a new todo item.
+          Example: `mfc todo add Buy groceries --dueDate 2023-10-15`
+        - `list`: List all todo items.
+          Example: `mfc todo list`
+        - `delete`: Delete a todo item.
+          Example: `mfc todo delete`
+        - `complete`: Mark a todo item as complete. Supports interactive selection.
+          Example: `mfc todo complete Buy groceries`
+        - `incomplete`: Mark a todo item as incomplete. Supports interactive selection.
+          Example: `mfc todo incomplete`
+        """.trimIndent(),
     ) {
     init {
         subcommands(
@@ -71,11 +70,7 @@ class TodoCommand :
 
     override fun run() =
         with(Terminal()) {
-            if (currentContext.invokedSubcommands.isNotEmpty()) {
-                return
-            }
-
-            if (checkInteractive()) return
+            if (currentContext.invokedSubcommands.isNotEmpty() || checkNonInteractive()) return
 
             info("Entering interactive todo mode. Type commands prefixed with 'mfc todo' automatically, or 'q' to exit.")
 
@@ -94,10 +89,9 @@ class TodoCommand :
                     val args = parts.drop(1)
 
                     fun CliktCommand.checkHelp() =
-                        if (args.contains("--help")) {
-                            info(help)
-                        } else {
-                            parse(args)
+                        when {
+                            args.contains("--help") -> info(help)
+                            else -> parse(args)
                         }
 
                     when (commandName) {
@@ -130,7 +124,7 @@ class AddTodoCommand : CliktCommand("add", "Add a new todo item") {
             try {
                 val parsedDate: LocalDate?
                 try {
-                    parsedDate = dueDate.getParsedDate()
+                    parsedDate = dueDate?.getParsedDate()
                 } catch (_: DateTimeParseException) {
                     danger("Invalid date format. Use YYYY-MM-DD or MM-DD.")
                     return
@@ -219,7 +213,7 @@ class DeleteTodoCommand : CliktCommand("delete", "Delete a todo item") {
     }
 
     private fun Terminal.handleInteractiveCompletion() {
-        if (checkInteractive()) return
+        if (checkNonInteractive()) return
 
         try {
             val response =
@@ -274,7 +268,7 @@ class CompleteTodoCommand : CliktCommand("complete", "Mark a todo item as comple
     }
 
     private fun Terminal.handleInteractiveCompletion() {
-        if (checkInteractive()) return
+        if (checkNonInteractive()) return
 
         val response = betterPrompt("Select a todo to mark as complete:", tasks.map { it.description }, true, "Exit")
         if (response == null || response == "Exit") {
@@ -329,7 +323,7 @@ class IncompleteTodoCommand : CliktCommand("incomplete", "Mark a todo item as in
     }
 
     private fun Terminal.handleInteractiveCompletion() {
-        if (checkInteractive()) return
+        if (checkNonInteractive()) return
 
         val response = betterPrompt("Select a todo to mark as incomplete:", tasks.map { it.description }, true, "Exit")
         if (response == null || response == "Exit") {
