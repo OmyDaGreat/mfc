@@ -1,5 +1,8 @@
 package xyz.malefic.mfc.util.todo
 
+import xyz.malefic.compose.prefs.collection.PersistentHashSet
+import xyz.malefic.mfc.util.prefs
+import java.io.Serializable
 import java.time.LocalDate
 
 /**
@@ -10,7 +13,8 @@ object TodoManager {
     /**
      * A mutable list of tasks managed by the TodoManager.
      */
-    val tasks = mutableListOf<TodoTask>()
+    var tasks = PersistentHashSet<TodoTask>("tasks", prefs)
+        private set
 
     /**
      * Represents a single todo task.
@@ -22,7 +26,7 @@ object TodoManager {
         val description: String,
         var completed: Boolean = false,
         val dueDate: LocalDate? = null,
-    )
+    ) : Serializable
 
     /**
      * Adds a new task to the todo list.
@@ -36,13 +40,6 @@ object TodoManager {
     ) {
         tasks.add(TodoTask(description, dueDate = dueDate))
     }
-
-    /**
-     * Lists all tasks in the todo list.
-     *
-     * @return A list of all tasks.
-     */
-    fun listTasks(): List<TodoTask> = tasks
 
     /**
      * Deletes a task from the todo list based on its description.

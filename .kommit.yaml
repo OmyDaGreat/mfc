@@ -13,6 +13,8 @@ scopes:
     - todo
     - gradle
     - project
+  docs:
+    - readme
   chore:
     - build
     - ci

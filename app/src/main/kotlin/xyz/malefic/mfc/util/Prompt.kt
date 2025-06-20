@@ -24,8 +24,9 @@ fun Terminal.betterPrompt(
     promptQuestion: String = "Please select an option:",
     choices: List<String>,
     enableNoneOption: Boolean = false,
+    customNoneOption: String? = null,
 ): String? {
-    val options = if (enableNoneOption) choices + "None" else choices
+    val options = if (enableNoneOption) choices + (customNoneOption ?: "None") else choices
     var currentIndex = 0
 
     fun displayOptions() {
@@ -43,6 +44,7 @@ fun Terminal.betterPrompt(
     displayOptions()
 
     return receiveKeyEvents { event ->
+        displayOptions()
         when (event.key) {
             "UpArrow" -> {
                 if (currentIndex > 0) currentIndex--
