@@ -46,9 +46,7 @@ object TodoManager {
      *
      * @param description The description of the task to be deleted.
      */
-    fun deleteTask(description: String) {
-        tasks.removeIf { it.description == description }
-    }
+    fun deleteTask(description: String) = tasks.removeIf { it.description == description }
 
     /**
      * Marks a task as completed based on its description.
@@ -57,5 +55,14 @@ object TodoManager {
      */
     fun completeTask(description: String) {
         tasks.find { it.description == description }?.completed = true
+    }
+
+    /**
+     * Marks a task as uncompleted based on its description.
+     *
+     * @param description The description of the task to be marked as uncomplete.
+     */
+    fun uncompleteTask(description: String) {
+        tasks.find { it.description == description }?.completed = false
     }
 }

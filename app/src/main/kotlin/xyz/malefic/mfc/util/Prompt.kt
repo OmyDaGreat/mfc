@@ -1,11 +1,7 @@
 package xyz.malefic.mfc.util
 
-import com.github.ajalt.mordant.input.InputReceiver.Status.Continue
-import com.github.ajalt.mordant.input.InputReceiver.Status.Finished
-import com.github.ajalt.mordant.input.receiveKeyEvents
+import com.github.ajalt.mordant.input.interactiveSelectList
 import com.github.ajalt.mordant.terminal.Terminal
-import com.github.ajalt.mordant.terminal.info
-import com.github.ajalt.mordant.terminal.muted
 
 /**
  * Displays an interactive prompt in the terminal for the user to select an option from a list.
@@ -18,6 +14,7 @@ import com.github.ajalt.mordant.terminal.muted
  * @param promptQuestion The question or message to display above the list of choices.
  * @param choices The list of selectable options.
  * @param enableNoneOption If true, adds a "None" option to the end of the choices.
+ * @param customNoneOption An optional custom label for the "None" option. If not provided, defaults to "None".
  * @return The selected option as a String, or `null` if "None" is selected or the prompt is canceled.
  */
 fun Terminal.betterPrompt(
@@ -25,42 +22,11 @@ fun Terminal.betterPrompt(
     choices: List<String>,
     enableNoneOption: Boolean = false,
     customNoneOption: String? = null,
-): String? {
-    val options = if (enableNoneOption) choices + (customNoneOption ?: "None") else choices
-    var currentIndex = 0
-
-    fun displayOptions() {
-        clearConsole()
-        info(promptQuestion)
-        options.forEachIndexed { index, option ->
-            if (index == currentIndex) {
-                info("> $option")
-            } else {
-                muted("  $option")
-            }
+): String? =
+    interactiveSelectList {
+        title(promptQuestion)
+        choices.forEach { addEntry(it) }
+        if (enableNoneOption) {
+            addEntry(customNoneOption ?: "None")
         }
     }
-
-    displayOptions()
-
-    return receiveKeyEvents { event ->
-        displayOptions()
-        when (event.key) {
-            "UpArrow" -> {
-                if (currentIndex > 0) currentIndex--
-            }
-            "DownArrow" -> {
-                if (currentIndex < options.size - 1) currentIndex++
-            }
-            "Enter" -> {
-                return@receiveKeyEvents Finished(options[currentIndex].takeUnless { it == "None" })
-            }
-            "q" -> {
-                muted("Prompt canceled.")
-                return@receiveKeyEvents Finished(null)
-            }
-        }
-        displayOptions()
-        Continue
-    }
-}
