@@ -232,7 +232,7 @@ jobs:
 
       - name: Update Homebrew Formula
         env:
-          HOMEBREW_TAP_REPO: OmyDaGreat/homebrew-mfc
+          HOMEBREW_TAP_REPO: OmyDaGreat/homebrew-malefic
           FORMULA_PATH: Formula/mfc.rb
           GH_TOKEN: ${{ secrets.REPO_ACCESS_TOKEN }}
         run: |
