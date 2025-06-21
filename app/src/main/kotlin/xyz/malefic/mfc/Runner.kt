@@ -7,8 +7,8 @@ import com.github.ajalt.clikt.core.terminal
 import com.github.ajalt.mordant.rendering.AnsiLevel
 import com.github.ajalt.mordant.terminal.Terminal
 import xyz.malefic.mfc.command.cron.CronCommand
-import xyz.malefic.mfc.command.gradle.GrunCommand
 import xyz.malefic.mfc.command.rss.RssCommand
+import xyz.malefic.mfc.command.single.GrunCommand
 import xyz.malefic.mfc.command.todo.TodoCommand
 import xyz.malefic.mfc.util.CliktCommand
 

@@ -13,7 +13,27 @@ import xyz.malefic.mfc.util.betterPrompt
 import xyz.malefic.mfc.util.cron.SystemCronManager
 import xyz.malefic.mfc.util.interactiveBaseCommand
 
-class CronCommand : CliktCommand("cron", "Manage scheduled tasks") {
+class CronCommand :
+    CliktCommand(
+        "cron",
+        """
+        Manage scheduled tasks interactively or via subcommands.
+
+        Interactive Mode:
+        - Enter interactive mode by running `mfc cron` without any subcommands.
+        - Type commands directly (e.g., `list`, `add`, `delete`) or use `q` to exit.
+        - Use `--help` after a command to see usage instructions.
+
+        Subcommands:
+        - `list`: List all currently scheduled tasks.
+          Example: `mfc cron list`
+        - `add`: Add a new scheduled task with timing options.
+          Example: `mfc cron add "backup files" --schedule every:30m`
+          Example: `mfc cron add "check updates" --on-startup`
+        - `delete`: Delete a scheduled task. Supports interactive selection.
+          Example: `mfc cron delete`
+        """.trimIndent(),
+    ) {
     init {
         subcommands(ListCronCommand(), AddCronCommand(), DeleteTaskCommand())
     }

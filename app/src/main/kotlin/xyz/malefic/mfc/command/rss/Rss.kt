@@ -28,7 +28,26 @@ import java.util.Date
 import java.util.Locale
 import javax.xml.parsers.DocumentBuilderFactory
 
-class RssCommand : CliktCommand("rss", "Manage RSS feeds") {
+class RssCommand :
+    CliktCommand(
+        "rss",
+        """
+        Manage your RSS feeds interactively or via subcommands.
+
+        Interactive Mode:
+        - Enter interactive mode by running `mfc rss` without any subcommands.
+        - Type commands directly (e.g., `fetch`, `add`, `delete`) or use `q` to exit.
+        - Use `--help` after a command to see usage instructions.
+
+        Subcommands:
+        - `fetch`: Fetch and display all items from your RSS feeds.
+          Example: `mfc rss fetch`
+        - `add`: Add a new RSS feed URL.
+          Example: `mfc rss add https://example.com/feed.xml`
+        - `delete`: Delete an RSS feed URL. Supports interactive selection.
+          Example: `mfc rss delete`
+        """.trimIndent(),
+    ) {
     init {
         subcommands(FetchCommand(), AddCommand(), DeleteCommand())
     }

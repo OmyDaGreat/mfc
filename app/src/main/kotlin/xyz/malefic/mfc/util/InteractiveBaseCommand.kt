@@ -14,6 +14,7 @@ import com.github.ajalt.mordant.terminal.warning
  * @param cliktCommand The base CliktCommand for which the interactive mode is being implemented.
  * @param subcommands A map of subcommand names to their corresponding CliktCommand instances.
  */
+@Suppress("kotlin:S3776")
 fun Terminal.interactiveBaseCommand(
     cliktCommand: CliktCommand,
     subcommands: Map<String, CliktCommand>,

@@ -11,7 +11,7 @@ scopes:
     - rss
     - cron
     - todo
-    - gradle
+    - single
     - project
   docs:
     - readme

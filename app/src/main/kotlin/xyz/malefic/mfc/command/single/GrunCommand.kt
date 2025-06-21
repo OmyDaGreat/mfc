@@ -1,4 +1,4 @@
-package xyz.malefic.mfc.command.gradle
+package xyz.malefic.mfc.command.single
 
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.arguments.multiple

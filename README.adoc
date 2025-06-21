@@ -83,7 +83,19 @@ Manage a list of RSS feeds and fetch new items.
 
 .Main Command
 ----
-rss <subcommand>
+rss [<subcommand>]
+----
+
+.Interactive Mode
+* Run `mfc rss` without any subcommands to enter interactive mode
+* Type commands directly (e.g., `fetch`, `add`, `delete`) or use `q` to exit
+* Use `--help` after a command to see usage instructions
+* Example:
+----
+mfc rss
+> fetch
+> add https://example.com/feed.xml
+> q
 ----
 
 .Subcommands:
@@ -122,7 +134,19 @@ Lets you list, add, and delete scheduled tasks.
 
 .Main Command
 ----
-cron <subcommand>
+cron [<subcommand>]
+----
+
+.Interactive Mode
+* Run `mfc cron` without any subcommands to enter interactive mode
+* Type commands directly (e.g., `list`, `add`, `delete`) or use `q` to exit
+* Use `--help` after a command to see usage instructions
+* Example:
+----
+mfc cron
+> list
+> add backup files --schedule every:30m
+> q
 ----
 
 .Subcommands:
@@ -156,13 +180,25 @@ cron delete
 ----
 * Prompts to select a task from the list to remove.
 
-=== todo: Manage Your Todos
+=== cron: Manage Scheduled Tasks
 
-Manage your todos interactively or via subcommands.
+Lets you list, add, and delete scheduled tasks.
 
 .Main Command
 ----
-todo <subcommand>
+cron [<subcommand>]
+----
+
+.Interactive Mode
+* Run `mfc cron` without any subcommands to enter interactive mode
+* Type commands directly (e.g., `list`, `add`, `delete`) or use `q` to exit
+* Use `--help` after a command to see usage instructions
+* Example:
+----
+mfc cron
+> list
+> add "backup files" --schedule every:30m
+> q
 ----
 
 .Subcommands:
