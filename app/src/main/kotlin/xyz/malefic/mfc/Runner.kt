@@ -7,6 +7,7 @@ import com.github.ajalt.clikt.core.terminal
 import com.github.ajalt.mordant.rendering.AnsiLevel
 import com.github.ajalt.mordant.terminal.Terminal
 import xyz.malefic.mfc.command.cron.CronCommand
+import xyz.malefic.mfc.command.mic.MicCommand
 import xyz.malefic.mfc.command.rss.RssCommand
 import xyz.malefic.mfc.command.single.GrunCommand
 import xyz.malefic.mfc.command.todo.TodoCommand
@@ -20,7 +21,7 @@ fun main(args: Array<String>) =
     Runner()
         .context {
             terminal = Terminal(ansiLevel = AnsiLevel.TRUECOLOR, interactive = true)
-        }.subcommands(GrunCommand(), RssCommand(), CronCommand(), TodoCommand())
+        }.subcommands(GrunCommand(), RssCommand(), CronCommand(), TodoCommand(), MicCommand())
         .main(args)
 
 class Runner : CliktCommand() {

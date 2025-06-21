@@ -43,7 +43,7 @@ class TodoCommand :
 
         Subcommands:
         - `add`: Add a new todo item.
-          Example: `mfc todo add Buy groceries --dueDate 2023-10-15`
+          Example: `mfc todo add Buy groceries --due 2023-10-15`
         - `list`: List all todo items.
           Example: `mfc todo list`
         - `delete`: Delete a todo item.
