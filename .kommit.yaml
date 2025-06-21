@@ -11,6 +11,7 @@ scopes:
     - rss
     - cron
     - todo
+    - mic
     - single
     - project
   docs:
