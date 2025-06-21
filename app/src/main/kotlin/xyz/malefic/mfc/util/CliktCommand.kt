@@ -19,7 +19,7 @@ abstract class CliktCommand(
     /**
      * The name of the command. If not provided, it will be inferred from the class name.
      */
-    name: String? = null,
+    val name: String? = null,
     /**
      * The help text for the command, displayed in the help output.
      */

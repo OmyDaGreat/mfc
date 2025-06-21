@@ -11,13 +11,24 @@ import com.github.ajalt.mordant.terminal.success
 import xyz.malefic.mfc.util.CliktCommand
 import xyz.malefic.mfc.util.betterPrompt
 import xyz.malefic.mfc.util.cron.SystemCronManager
+import xyz.malefic.mfc.util.interactiveBaseCommand
 
 class CronCommand : CliktCommand("cron", "Manage scheduled tasks") {
     init {
         subcommands(ListCronCommand(), AddCronCommand(), DeleteTaskCommand())
     }
 
-    override fun run() = Unit
+    override val invokeWithoutSubcommand = true
+
+    override fun run() =
+        Terminal().interactiveBaseCommand(
+            this@CronCommand,
+            buildMap {
+                put("list", ListCronCommand())
+                put("add", AddCronCommand())
+                put("delete", DeleteTaskCommand())
+            },
+        )
 }
 
 class ListCronCommand : CliktCommand("list", "List all scheduled tasks") {

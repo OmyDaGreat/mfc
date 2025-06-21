@@ -1,6 +1,5 @@
 package xyz.malefic.mfc.command.todo
 
-import com.github.ajalt.clikt.core.parse
 import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.arguments.multiple
@@ -18,13 +17,12 @@ import com.github.ajalt.mordant.table.Borders.ALL
 import com.github.ajalt.mordant.table.table
 import com.github.ajalt.mordant.terminal.Terminal
 import com.github.ajalt.mordant.terminal.danger
-import com.github.ajalt.mordant.terminal.info
 import com.github.ajalt.mordant.terminal.muted
 import com.github.ajalt.mordant.terminal.success
-import com.github.ajalt.mordant.terminal.warning
 import xyz.malefic.mfc.util.CliktCommand
 import xyz.malefic.mfc.util.betterPrompt
 import xyz.malefic.mfc.util.checkNonInteractive
+import xyz.malefic.mfc.util.interactiveBaseCommand
 import xyz.malefic.mfc.util.todo.TodoManager
 import xyz.malefic.mfc.util.todo.TodoManager.TodoTask
 import xyz.malefic.mfc.util.todo.TodoManager.tasks
@@ -69,44 +67,16 @@ class TodoCommand :
     override val invokeWithoutSubcommand = true
 
     override fun run() =
-        with(Terminal()) {
-            if (currentContext.invokedSubcommands.isNotEmpty() || checkNonInteractive()) return
-
-            info("Entering interactive todo mode. Type commands prefixed with 'mfc todo' automatically, or 'q' to exit.")
-
-            while (true) {
-                try {
-                    print(theme.info("Enter a command: "))
-                    val input = readLine()?.trim() ?: continue
-
-                    if (input.lowercase() == "q") {
-                        success("Exiting interactive todo mode.")
-                        break
-                    }
-
-                    val parts = input.split(" ")
-                    val commandName = parts.firstOrNull()
-                    val args = parts.drop(1)
-
-                    fun CliktCommand.checkHelp() =
-                        when {
-                            args.contains("--help") -> info(help)
-                            else -> parse(args)
-                        }
-
-                    when (commandName) {
-                        "help" -> println(currentContext.command.help(currentContext))
-                        "add" -> AddTodoCommand().checkHelp()
-                        "list" -> ListTodoCommand().checkHelp()
-                        "delete" -> DeleteTodoCommand().checkHelp()
-                        "complete" -> CompleteTodoCommand().checkHelp()
-                        else -> danger("Unknown command: $commandName")
-                    }
-                } catch (e: Exception) {
-                    warning("Something didn't quite work as expected: ${e.message}")
-                }
-            }
-        }
+        Terminal().interactiveBaseCommand(
+            this@TodoCommand,
+            buildMap {
+                put("add", AddTodoCommand())
+                put("list", ListTodoCommand())
+                put("delete", DeleteTodoCommand())
+                put("complete", CompleteTodoCommand())
+                put("incomplete", IncompleteTodoCommand())
+            },
+        )
 }
 
 class AddTodoCommand : CliktCommand("add", "Add a new todo item") {

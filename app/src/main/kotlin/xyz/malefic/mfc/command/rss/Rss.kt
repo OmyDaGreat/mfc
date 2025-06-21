@@ -20,6 +20,7 @@ import org.w3c.dom.Element
 import xyz.malefic.mfc.util.CliktCommand
 import xyz.malefic.mfc.util.betterPrompt
 import xyz.malefic.mfc.util.clearConsole
+import xyz.malefic.mfc.util.interactiveBaseCommand
 import xyz.malefic.mfc.util.rssURLs
 import java.net.URI
 import java.text.SimpleDateFormat
@@ -32,7 +33,17 @@ class RssCommand : CliktCommand("rss", "Manage RSS feeds") {
         subcommands(FetchCommand(), AddCommand(), DeleteCommand())
     }
 
-    override fun run() = Unit
+    override val invokeWithoutSubcommand = true
+
+    override fun run() =
+        Terminal().interactiveBaseCommand(
+            this,
+            buildMap {
+                put("fetch", FetchCommand())
+                put("add", AddCommand())
+                put("delete", DeleteCommand())
+            },
+        )
 }
 
 class FetchCommand : CliktCommand("fetch", "Fetch all RSS feeds") {
