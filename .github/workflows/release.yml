@@ -108,12 +108,10 @@ jobs:
             fi
           fi
 
-          # Escape newlines for GitHub Actions output
-          changelog="${changelog//'%'/'%25'}"
-          changelog="${changelog//$'\n'/'%0A'}"
-          changelog="${changelog//$'\r'/'%0D'}"
-
-          echo "changelog=$changelog" >> $GITHUB_OUTPUT
+          # Store changelog for output without escaping newlines
+          echo 'CHANGELOG<<EOF' >> $GITHUB_OUTPUT
+          echo "$changelog" >> $GITHUB_OUTPUT
+          echo 'EOF' >> $GITHUB_OUTPUT
 
       - name: Make Gradlew executable
         run: chmod +x gradlew
@@ -190,7 +188,7 @@ jobs:
             **mfc** is a multi-use general purpose terminal application!
 
             ## 📋 What's Changed
-            ${{ steps.changelog.outputs.changelog }}
+            ${{ steps.changelog.outputs.CHANGELOG }}
 
             ## 📦 Installation
 
