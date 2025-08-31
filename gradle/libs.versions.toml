@@ -1,5 +1,5 @@
 [versions]
-shadow = "8.3.8"
+shadow = "9.1.0"
 kotlin = "2.2.0"
 clikt = "5.0.3"
 mordant = "3.0.2"
