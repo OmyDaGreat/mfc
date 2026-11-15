@@ -24,6 +24,6 @@ fun main(args: Array<String>) =
         }.subcommands(GrunCommand(), RssCommand(), CronCommand(), TodoCommand(), MicCommand())
         .main(args)
 
-class Runner : CliktCommand() {
+class Runner : CliktCommand("mfc") {
     override fun run() = Unit
 }
