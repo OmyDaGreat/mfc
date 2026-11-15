@@ -51,9 +51,11 @@ brew install mfc
 
 === Manual Installation
 
-* Download the latest release from the link:https://github.com/OmyDaGreat/mfc/releases[GitHub Releases page]
-* Extract the ZIP file to a directory of your choice
-* Add the directory to your system PATH or create a symbolic link to the executable
+* Download the archive for your platform from the link:https://github.com/OmyDaGreat/mfc/releases[GitHub Releases page]
+** Native builds (no Java required): `mfc-linux-x64.tar.gz`, `mfc-linux-arm64.tar.gz`, `mfc-macos-arm64.tar.gz`, `mfc-windows-x64.zip`
+** JVM build (requires Java 25+): `mfc-<version>.zip`
+* Extract the archive to a directory of your choice, keeping the bundled libraries next to the `mfc` executable
+* Add the directory to your system PATH
 
 == Usage
 

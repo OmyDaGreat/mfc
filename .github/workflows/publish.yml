@@ -1,0 +1,246 @@
+name: Publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: 'Version bump type'
+        required: false
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      custom_version:
+        description: 'Custom version (overrides bump)'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    name: Test and Build Native CLI
+    uses: ./.github/workflows/gradle.yml
+
+  publish:
+    name: Release Build and Publish
+    needs: ci
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.bump_version.outputs.new_version }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v6
+        with:
+          distribution: 'temurin'
+          java-version: 25
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Make gradlew Executable
+        run: chmod +x gradlew
+
+      - name: Bump version in gradle.properties
+        id: bump_version
+        run: |
+          file="gradle.properties"
+          if [ -n "${{ github.event.inputs.custom_version }}" ]; then
+          new_version="${{ github.event.inputs.custom_version }}"
+          else
+          version_line=$(grep "^version=" "$file" || echo "")
+          version=${version_line#version=}
+          IFS='.' read -r major minor patch <<< "$version"
+          case "${{ github.event.inputs.bump }}" in
+          major)
+          major=$((major+1)); minor=0; patch=0;;
+          minor)
+          minor=$((minor+1)); patch=0;;
+          patch|*)
+          patch=$((patch+1));;
+          esac
+          new_version="$major.$minor.$patch"
+          fi
+          sed -i "s/^version=.*/version=$new_version/" "$file"
+          echo "new_version=$new_version" >> $GITHUB_OUTPUT
+
+      - name: Build Java CLI zip
+        run: ./gradlew :app:distZip
+
+      - name: Download native CLI builds
+        uses: actions/download-artifact@v8
+        with:
+          pattern: mfc-*
+          path: dist
+          merge-multiple: true
+
+      - name: Rebase onto latest branch
+        run: |
+          git -c user.name="github-actions[bot]" \
+              -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            pull --rebase --autostash origin "${{ github.ref_name }}"
+
+      - name: Commit and push version bump
+        uses: stefanzweifel/git-auto-commit-action@v7
+        with:
+          commit_message: "chore(release): bump version to ${{ steps.bump_version.outputs.new_version }}"
+          file_pattern: gradle.properties
+
+      - name: Generate changelog since last tag
+        id: changelog
+        run: |
+          last_tag=$(git describe --tags --abbrev=0 || echo "")
+          if [ -z "$last_tag" ]; then
+            changelog=$(git log --pretty=format:"* %s" )
+          else
+            changelog=$(git log "$last_tag"..HEAD --pretty=format:"* %s")
+          fi
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$changelog" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: v${{ steps.bump_version.outputs.new_version }}
+          name: v${{ steps.bump_version.outputs.new_version }}
+          body: ${{ steps.changelog.outputs.changelog }}
+          files: |
+            dist/*
+            app/build/distributions/*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  package-managers:
+    name: Update Homebrew Tap and Scoop Bucket
+    needs: publish
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.publish.outputs.version }}
+      TAG: v${{ needs.publish.outputs.version }}
+      RELEASES: https://github.com/OmyDaGreat/mfc/releases/download/v${{ needs.publish.outputs.version }}
+      REPO_ACCESS_TOKEN: ${{ secrets.REPO_ACCESS_TOKEN }}
+    steps:
+      - name: Check for repository token
+        id: token
+        run: |
+          if [ -z "$REPO_ACCESS_TOKEN" ]; then
+            echo "::warning::REPO_ACCESS_TOKEN is not set; skipping Homebrew and Scoop updates."
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download native CLI builds
+        if: steps.token.outputs.present == 'true'
+        uses: actions/download-artifact@v8
+        with:
+          pattern: mfc-*
+          path: dist
+          merge-multiple: true
+
+      - name: Calculate SHA256 checksums
+        if: steps.token.outputs.present == 'true'
+        id: sha
+        working-directory: dist
+        run: |
+          echo "linux_x64=$(sha256sum mfc-linux-x64.tar.gz | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+          echo "linux_arm64=$(sha256sum mfc-linux-arm64.tar.gz | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+          echo "macos_arm64=$(sha256sum mfc-macos-arm64.tar.gz | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+          echo "windows_x64=$(sha256sum mfc-windows-x64.zip | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+
+      - name: Update Homebrew formula
+        if: steps.token.outputs.present == 'true'
+        run: |
+          git clone "https://x-access-token:${REPO_ACCESS_TOKEN}@github.com/OmyDaGreat/homebrew-malefic.git"
+          cd homebrew-malefic
+          mkdir -p Formula
+          cat > Formula/mfc.rb << EOF
+          class Mfc < Formula
+            desc "Multi-use general purpose terminal application"
+            homepage "https://github.com/OmyDaGreat/mfc"
+            version "${VERSION}"
+            license "MIT"
+
+            on_macos do
+              on_arm do
+                url "${RELEASES}/mfc-macos-arm64.tar.gz"
+                sha256 "${{ steps.sha.outputs.macos_arm64 }}"
+              end
+            end
+
+            on_linux do
+              on_intel do
+                url "${RELEASES}/mfc-linux-x64.tar.gz"
+                sha256 "${{ steps.sha.outputs.linux_x64 }}"
+              end
+              on_arm do
+                url "${RELEASES}/mfc-linux-arm64.tar.gz"
+                sha256 "${{ steps.sha.outputs.linux_arm64 }}"
+              end
+            end
+
+            def install
+              # The native image loads its bundled JDK libraries from its own directory.
+              libexec.install Dir["*"]
+              (bin/"mfc").write_exec_script libexec/"mfc"
+            end
+
+            test do
+              assert_match "rss", shell_output("#{bin}/mfc --help")
+            end
+          end
+          EOF
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Formula/mfc.rb
+          git commit -m "mfc: update to ${VERSION}"
+          git push
+
+      - name: Update Scoop manifest
+        if: steps.token.outputs.present == 'true'
+        run: |
+          git clone "https://x-access-token:${REPO_ACCESS_TOKEN}@github.com/OmyDaGreat/MaleficBucket.git"
+          cd MaleficBucket
+          mkdir -p bucket
+          cat > bucket/mfc.json << EOF
+          {
+              "version": "${VERSION}",
+              "description": "A multi-use general purpose terminal application!",
+              "homepage": "https://github.com/OmyDaGreat/mfc",
+              "license": "MIT",
+              "architecture": {
+                  "64bit": {
+                      "url": "${RELEASES}/mfc-windows-x64.zip",
+                      "hash": "${{ steps.sha.outputs.windows_x64 }}"
+                  }
+              },
+              "bin": "mfc.exe",
+              "checkver": "github",
+              "autoupdate": {
+                  "architecture": {
+                      "64bit": {
+                          "url": "https://github.com/OmyDaGreat/mfc/releases/download/v\$version/mfc-windows-x64.zip"
+                      }
+                  }
+              }
+          }
+          EOF
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add bucket/mfc.json
+          git commit -m "mfc: update to ${VERSION}"
+          git push

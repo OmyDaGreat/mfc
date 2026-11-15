@@ -1,6 +1,6 @@
 plugins {
     alias(libs.plugins.kotlin.jvm)
-    alias(libs.plugins.shadow)
+    alias(libs.plugins.graalvm.native)
     application
 }
 
@@ -17,28 +17,33 @@ dependencies {
 testing {
     suites {
         val test by getting(JvmTestSuite::class) {
-            useKotlinTest("2.1.21")
+            useKotlinTest()
         }
     }
 }
 
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(17)
-    }
-}
-
-tasks {
-    shadowJar {
-        mergeServiceFiles {
-            include("META-INF/services/*")
-        }
-        archiveBaseName.set("mfc")
-        archiveClassifier.set("")
-        archiveVersion.set("")
-    }
+kotlin {
+    jvmToolchain(25)
 }
 
 application {
     mainClass = "xyz.malefic.mfc.RunnerKt"
+    applicationName = "mfc"
+    applicationDefaultJvmArgs = listOf("--enable-native-access=ALL-UNNAMED")
+}
+
+graalvmNative {
+    toolchainDetection = true
+
+    binaries.named("main") {
+        imageName = "mfc"
+        mainClass = application.mainClass
+        javaLauncher =
+            javaToolchains.launcherFor {
+                languageVersion = JavaLanguageVersion.of(25)
+                vendor = JvmVendorSpec.GRAAL_VM
+                nativeImageCapable = true
+            }
+        buildArgs.addAll("--enable-native-access=ALL-UNNAMED", "--enable-url-protocols=http,https")
+    }
 }
