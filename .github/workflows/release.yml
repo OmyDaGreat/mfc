@@ -38,7 +38,7 @@ jobs:
           java-version: '17'
 
       - name: Setup Kotlin
-        uses: fwilhe2/setup-kotlin@v1
+        uses: fwilhe2/setup-kotlin@v1.9
         with:
           version: '2.1.21'
 
